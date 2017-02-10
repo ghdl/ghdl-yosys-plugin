@@ -3,9 +3,29 @@ VHDL synthesis (based on ghdl)
 
 This is awfully experimental and work in progress!
 
-## How to build
+## How to build as a module
 
-FIXME: should provide an easy way to build as a module!
+Get and install yosys.
+
+Get ghdl from github,
+build and install
+build and install libghdlsynth.so:
+```sh
+$ make libghdlsynth.so
+$ make install.libghdlsynth.shared
+```
+
+From ghdlsynth-beta:
+
+make GHDL_PREFIX=prefix-used-to-configure-ghdl
+
+This generates ghdl.so, which can be used directly:
+
+```sh
+$ yosys -m ghdl.so
+```
+
+## How to build (not recommended)
 
 Get ghdl from github,
 build and install
