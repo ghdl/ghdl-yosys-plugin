@@ -1,5 +1,5 @@
-PROJ = led_on
-PIN_DEF = led_on.pcf
+PROJ = blink
+PIN_DEF = blink.pcf
 DEVICE = hx1k
 
 all: $(PROJ).rpt $(PROJ).bin
@@ -7,6 +7,7 @@ all: $(PROJ).rpt $(PROJ).bin
 %.blif: %.vhdl
 	ghdl -a $(PROJ).vhdl
 	yosys -m ../../ghdl.so -p 'ghdl $(PROJ); synth_ice40 -blif $@'
+
 
 %.asc: $(PIN_DEF) %.blif
 	arachne-pnr -d $(subst hx,,$(subst lp,,$(DEVICE))) -o $@ -p $^
