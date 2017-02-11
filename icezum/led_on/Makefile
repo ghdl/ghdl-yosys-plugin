@@ -6,7 +6,7 @@ all: $(PROJ).rpt $(PROJ).bin
 
 %.blif: %.vhdl
 	ghdl -a $(PROJ).vhdl
-	yosys -m ../../ghdl.so -p 'ghdl led_on; synth_ice40 -blif $@'
+	yosys -m ../../ghdl.so -p 'ghdl $(PROJ); synth_ice40 -blif $@'
 	##yosys -p 'synth_ice40 -top top -blif $@' $<
 
 %.asc: $(PIN_DEF) %.blif
