@@ -1,5 +1,6 @@
 A hello world example for the **Icezum Alhambra board**
-It just blinks all the leds
+Testing the sw1 pushbutton. The state of the button and its negated are wired
+to led0 and led7 respectively
 
 Execute
 
