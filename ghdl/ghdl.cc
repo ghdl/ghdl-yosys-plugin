@@ -216,7 +216,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Concat2:
 		case Id_Concat3:
 		case Id_Concat4:
-			//  Skip
+			//  Skip: these won't create cells.
 			break;
 		default:
 			log_cmd_error("Unsupported(1): instance %s of %s.\n",
@@ -277,9 +277,11 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Signal:
 			{
 				Net sig = get_driver(get_input(inst, 0));
-				Wire *w = net_map.at(sig.id);
-				if (w)
-					module->rename(w, to_str(iname));
+                                if (is_set(net_map, sig)) {
+                                    Wire *w = net_map.at(sig.id);
+                                    if (w)
+                                        module->rename(w, to_str(iname));
+                                }
 			}
 			break;
 		case Id_Output:
