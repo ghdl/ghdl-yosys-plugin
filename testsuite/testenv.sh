@@ -10,16 +10,22 @@ if [ x"$YOSYS" = x ]; then
     YOSYS="yosys -m ../../ghdl.so"
 fi
 
+cmd ()
+{
+    echo "$@"
+    "$@"
+}
+
 analyze ()
 {
     echo "analyze $@"
-    "$GHDL" -a $GHDL_STD_FLAGS $GHDL_FLAGS $@
+    cmd "$GHDL" -a $GHDL_STD_FLAGS $GHDL_FLAGS $@
 }
 
 synth ()
 {
     echo "synthesize $@"
-    "$YOSYS" -p "ghdl $@; synth_ice40 -blif out.blif"
+    cmd "$YOSYS" -Q -q -p "ghdl $@; synth_ice40 -blif out.blif"
 }
 
 clean ()
