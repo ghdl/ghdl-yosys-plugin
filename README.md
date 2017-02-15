@@ -9,7 +9,7 @@ Get and install yosys.
 
 Get ghdl from github,
 build and install
-build and install libghdlsynth.so:
+build and install `libghdlsynth.so`:
 ```sh
 $ make libghdlsynth.so
 $ make install.libghdlsynth.shared
@@ -17,9 +17,11 @@ $ make install.libghdlsynth.shared
 
 From ghdlsynth-beta:
 
+```sh
 make GHDL_PREFIX=prefix-used-to-configure-ghdl
+```
 
-This generates ghdl.so, which can be used directly:
+This generates `ghdl.so`, which can be used directly:
 
 ```sh
 $ yosys -m ghdl.so
@@ -29,7 +31,7 @@ $ yosys -m ghdl.so
 
 Get ghdl from github,
 build and install
-build and install libghdlsynth.a:
+build and install `libghdlsynth.a`:
 ```sh
 $ make libghdlsynth.a
 $ make install.libghdlsynth
