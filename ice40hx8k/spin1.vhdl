@@ -4,6 +4,9 @@ architecture spin1 of leds is
   signal leds : std_ulogic_vector (1 to 5);
 begin
   (led1, led2, led3, led4, led5) <= leds;
+  led6 <= '0';
+  led7 <= '0';
+  led8 <= '0';
 
   process (clk)
     variable cnt : unsigned (1 downto 0) := "00";
