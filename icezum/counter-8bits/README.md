@@ -1,4 +1,4 @@
-An example for the **Icezum Alhambra board**
+An example for the **Icezum Alhambra board**  
 A binary counter shown in the 8 test leds
 
 Execute
