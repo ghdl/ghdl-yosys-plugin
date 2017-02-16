@@ -16,6 +16,11 @@ cmd ()
     "$@"
 }
 
+run_yosys ()
+{
+    cmd "$YOSYS" -Q "$@"
+}
+
 analyze ()
 {
     echo "analyze $@"
@@ -25,7 +30,7 @@ analyze ()
 synth ()
 {
     echo "synthesize $@"
-    cmd "$YOSYS" -Q -q -p "ghdl $@; synth_ice40 -blif out.blif"
+    run_yosys -q -p "ghdl $@; synth_ice40 -blif out.blif"
 }
 
 clean ()
