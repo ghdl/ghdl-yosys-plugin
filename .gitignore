@@ -1,2 +1,10 @@
 *.d
 .gdb_history
+*.bin
+*.asc
+*.blif
+*.cf
+*.rpt
+*.o
+*.so
+
