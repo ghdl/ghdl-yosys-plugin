@@ -1,0 +1,9 @@
+set_io --warn-no-port led0  95   # output
+set_io --warn-no-port led1  96   # output
+set_io --warn-no-port led2  97   # output
+set_io --warn-no-port led3  98   # output
+set_io --warn-no-port led4  99   # output
+set_io --warn-no-port led5  101  # output
+set_io --warn-no-port led6  102  # output
+set_io --warn-no-port led7  104  # output
+set_io --warn-no-port clk 21
