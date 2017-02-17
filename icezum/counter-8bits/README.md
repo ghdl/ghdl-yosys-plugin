@@ -1,5 +1,5 @@
-A hello world example for the **Icezum Alhambra board**
-It just blinks all the leds
+An example for the **Icezum Alhambra board**  
+A binary counter shown in the 8 test leds
 
 Execute
 
