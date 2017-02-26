@@ -189,6 +189,8 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		Module_Id id = get_id(im);
 		switch (id) {
 		case Id_And:
+                case Id_Or:
+                case Id_Xor:
 		case Id_Add:
 		case Id_Mux2:
 		case Id_Mux4:
@@ -237,6 +239,12 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 #define OUT(N) get_src(net_map, get_output(inst, (N)))
 		case Id_And:
 			module->addAnd(to_str(iname), IN(0), IN(1), OUT(0));
+			break;
+		case Id_Or:
+			module->addOr(to_str(iname), IN(0), IN(1), OUT(0));
+			break;
+		case Id_Xor:
+			module->addXor(to_str(iname), IN(0), IN(1), OUT(0));
 			break;
 		case Id_Add:
 			module->addAdd(to_str(iname), IN(0), IN(1), OUT(0));
