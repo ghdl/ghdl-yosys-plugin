@@ -191,6 +191,9 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_And:
                 case Id_Or:
                 case Id_Xor:
+		case Id_Nand:
+                case Id_Nor:
+                case Id_Xnor:
 		case Id_Add:
 		case Id_Mux2:
 		case Id_Mux4:
@@ -245,6 +248,25 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			break;
 		case Id_Xor:
 			module->addXor(to_str(iname), IN(0), IN(1), OUT(0));
+			break;
+		case Id_Nand:
+                        {
+                          SigSpec r = OUT(0);
+                          RTLIL::Wire *w = module->addWire(NEW_ID, r.size());
+                          module->addAnd(NEW_ID, IN(0), IN(1), w);
+                          module->addNot(to_str(iname), w, r);
+                        }
+			break;
+		case Id_Nor:
+                        {
+                          SigSpec r = OUT(0);
+                          RTLIL::Wire *w = module->addWire(NEW_ID, r.size());
+                          module->addOr(NEW_ID, IN(0), IN(1), w);
+                          module->addNot(to_str(iname), w, r);
+                        }
+			break;
+		case Id_Xnor:
+			module->addXnor(to_str(iname), IN(0), IN(1), OUT(0));
 			break;
 		case Id_Add:
 			module->addAdd(to_str(iname), IN(0), IN(1), OUT(0));
