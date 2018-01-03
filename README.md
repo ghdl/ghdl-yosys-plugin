@@ -14,10 +14,15 @@ Get the latest version of GNAT:
 $ sudo apt-get install gnat-7
 ```
 
-From ghdl, build and install `libghdlsynth.so`. You may need sudo permission.
+From ghdl:
+```sh
+$ ./configure --disable-werror
+```
+
+Then build and install `libghdlsynth.so`. You may need sudo permission.
 ```sh
 $ make libghdlsynth.so
-$ make install.libghdlsynth.included
+$ make install.libghdlsynth.include
 $ make install.libghdlsynth.shared
 $ make install.libghdlsynth.static
 ```
