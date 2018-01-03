@@ -7,18 +7,25 @@ This is awfully experimental and work in progress!
 
 Get and install yosys.
 
-Get ghdl from github,
-build and install
-build and install `libghdlsynth.so`:
+Get ghdl from github.
+
+Get the latest version of GNAT:
+```sh
+$ sudo apt-get install gnat-7
+```
+
+From ghdl, build and install `libghdlsynth.so`. You may need sudo permission.
 ```sh
 $ make libghdlsynth.so
+$ make install.libghdlsynth.included
 $ make install.libghdlsynth.shared
+$ make install.libghdlsynth.static
 ```
 
 From ghdlsynth-beta:
 
 ```sh
-make GHDL_PREFIX=prefix-used-to-configure-ghdl
+make GHDL_PREFIX=/usr/local/
 ```
 
 This generates `ghdl.so`, which can be used directly:
@@ -43,7 +50,7 @@ From ghdlsynth-beta:
 Patch yosys sources using `yosys.diff`
 Copy the `ghdl/` directory in `yosys/frontends`
 
-Configure yosys.
+## Configure yosys.
 In Makefile.conf, add:
 ```makefile
 ENABLE_GHDL := 1
