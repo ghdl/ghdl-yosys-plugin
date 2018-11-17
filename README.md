@@ -2,6 +2,11 @@
 VHDL synthesis (based on ghdl)
 
 This is awfully experimental and work in progress!
+TODO: Explain purpose of program.
+What is the relationship with GHDL? Is it going to be integrated in GHDL once it is fully featured?
+What kind of VHDL do we want to support? (GHDL fully supports the 1987, 1993, 2002 versions of the IEEE 1076 VHDL standard, and partially the latest 2008 revision, according to the website)
+Explain expected input and outputs.
+Create table with features of VHDL that are supported, WIP and pending.
 
 ## How to build as a module
 
@@ -10,6 +15,7 @@ Get and install yosys.
 Get ghdl from github.
 
 Get the latest version of GNAT:
+This doesn't work. Cannot find gnat-7 in apt-get.
 ```sh
 $ sudo apt-get install gnat-7
 ```
