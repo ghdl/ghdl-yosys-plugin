@@ -18,7 +18,7 @@ cmd ()
 
 run_yosys ()
 {
-    cmd "$YOSYS" -Q "$@"
+    cmd $YOSYS -Q "$@"
 }
 
 analyze ()
