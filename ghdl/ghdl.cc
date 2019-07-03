@@ -1,19 +1,19 @@
 /*
   Copyright (C) 2016  Tristan Gingold <tgingold@free.fr>
- 
+
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
-  
+
   This program is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-  
+
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
-  
+
 */
 
 #include "kernel/yosys.h"
@@ -79,6 +79,21 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 		{
 			RTLIL::SigSpec res = IN(0);
 			return res.extract(get_param_uns32(inst, 0), get_width(n));
+		}
+        case Id_Insert:
+		{
+			int pos = get_param_uns32(inst, 0);
+			RTLIL::SigSpec in0 = IN(0);
+			int size0 = in0.size();
+			RTLIL::SigSpec in1 = IN(1);
+			int size1 = in1.size();
+			RTLIL::SigSpec res;
+
+			for (int i = 0; i < size0; i++) {
+				 res.append((i >= pos && i < pos + size1) ?
+					    in1[i - pos] : in0[i]);
+			}
+			return res;
 		}
 	case Id_Concat2:
 	case Id_Concat3:
@@ -199,27 +214,28 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Dff:
 		case Id_Idff:
 		case Id_Eq:
+                case Id_Ne:
 		case Id_Not:
 			for (Port_Idx idx = 0; idx < get_nbr_outputs(im); idx++) {
 				Net o = get_output(inst, idx);
 				//  The wire may have been created for an output
 				if (!is_set(net_map, o)) {
-					RTLIL::Wire *wire = module->addWire(NEW_ID);
-					wire->width = get_width(o);
+					RTLIL::Wire *wire =
+                                          module->addWire(NEW_ID, get_width(o));
 					set_src(net_map, o, wire);
 				}
 			}
 			break;
 		case Id_Signal:
 		case Id_Output:
-		case Id_Posedge:
-		case Id_Negedge:
 		case Id_Const_UB32:
 		case Id_Uextend:
 		case Id_Extract:
+                case Id_Insert:
 		case Id_Concat2:
 		case Id_Concat3:
 		case Id_Concat4:
+                case Id_Edge:  // Ignored.
 			//  Skip: these won't create cells.
 			break;
 		default:
@@ -276,15 +292,15 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Eq:
 			module->addEq(to_str(iname), IN(0), IN(1), OUT(0));
 			break;
+		case Id_Ne:
+			module->addNe(to_str(iname), IN(0), IN(1), OUT(0));
+			break;
 		case Id_Mux2:
 			module->addMux(to_str(iname), IN(1), IN(2), IN(0), OUT(0));
 			break;
 		case Id_Dff:
 		case Id_Idff:
-			{
-				Instance clk_inst = get_net_parent(get_driver(get_input(inst, 0)));
-				module->addDff(to_str(iname), get_src(net_map, get_driver(get_input(clk_inst, 0))), IN(1), OUT(0), get_id(clk_inst) == Id_Posedge);
-			}
+                        module->addDff(to_str(iname), IN(0), IN(1), OUT(0));
 			//  For idff, the initial value is set on the output
 			//  wire.
 			if (id == Id_Idff) {
@@ -316,14 +332,14 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Output:
 			module->connect(OUT (0), IN (0));
 			break;
-		case Id_Posedge:
-		case Id_Negedge:
 		case Id_Const_UB32:
 		case Id_Uextend:
 		case Id_Extract:
+                case Id_Insert:
 		case Id_Concat2:
 		case Id_Concat3:
 		case Id_Concat4:
+                case Id_Edge:
 			break;
 #undef IN
 #undef OUT
