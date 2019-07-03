@@ -216,6 +216,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Eq:
                 case Id_Ne:
 		case Id_Not:
+                case Id_Assert:  // No output
 			for (Port_Idx idx = 0; idx < get_nbr_outputs(im); idx++) {
 				Net o = get_output(inst, idx);
 				//  The wire may have been created for an output
@@ -235,9 +236,11 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Concat2:
 		case Id_Concat3:
 		case Id_Concat4:
-                case Id_Edge:  // Ignored.
 			//  Skip: these won't create cells.
 			break;
+                case Id_Edge:
+                  	//  The cell is ignored.
+                  	break;
 		default:
 			log_cmd_error("Unsupported(1): instance %s of %s.\n",
 				      to_str(get_instance_name(inst)).c_str(),
@@ -331,6 +334,9 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			break;
 		case Id_Output:
 			module->connect(OUT (0), IN (0));
+			break;
+		case Id_Assert:
+			module->addAssert(to_str(iname), IN(0), State::S1);
 			break;
 		case Id_Const_UB32:
 		case Id_Uextend:
