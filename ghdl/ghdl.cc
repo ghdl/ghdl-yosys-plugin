@@ -64,7 +64,7 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 
 	Instance inst = get_net_parent(n);
 	switch(get_id(inst)) {
-#define IN(N) get_src(net_map, get_driver(get_input(inst, (N))))
+#define IN(N) get_src(net_map, get_input_net(inst, (N)))
 	case Id_Signal:
 		return IN(0);
 	case Id_Uextend:
@@ -173,8 +173,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 	//  Create output ports
 	Port_Idx nbr_outputs = get_nbr_outputs(m);
 	for (Port_Idx idx = 0; idx < nbr_outputs; idx++) {
-		Input port = get_input(self_inst, idx);
-		Net output_out = get_driver(port);
+		Net output_out = get_input_net(self_inst, idx);
 
 		//  Create wire
 		RTLIL::Wire *wire = module->addWire(to_str(get_output_name(m, idx)));
@@ -188,8 +187,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		//  reuse this wire.
 		Instance output_inst = get_net_parent(output_out);
 		log_assert(get_id(get_module(output_inst)) == Id_Output);
-		Input output_in = get_input(output_inst, 0);
-		Net output_drv = get_driver(output_in);
+		Net output_drv = get_input_net(output_inst, 0);
 		if (has_one_connection (output_drv))
 			set_src(net_map, output_drv, wire);
 		}
@@ -216,7 +214,10 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Eq:
                 case Id_Ne:
 		case Id_Not:
+                case Id_Red_Or:
+                case Id_Red_And:
                 case Id_Assert:  // No output
+                case Id_Assume:  // No output
 			for (Port_Idx idx = 0; idx < get_nbr_outputs(im); idx++) {
 				Net o = get_output(inst, idx);
 				//  The wire may have been created for an output
@@ -256,7 +257,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		Module_Id id = get_id(inst);
 		Sname iname = get_instance_name(inst);
 		switch (id) {
-#define IN(N) get_src(net_map, get_driver(get_input(inst, (N))))
+#define IN(N) get_src(net_map, get_input_net(inst, (N)))
 #define OUT(N) get_src(net_map, get_output(inst, (N)))
 		case Id_And:
 			module->addAnd(to_str(iname), IN(0), IN(1), OUT(0));
@@ -298,6 +299,12 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Ne:
 			module->addNe(to_str(iname), IN(0), IN(1), OUT(0));
 			break;
+		case Id_Red_Or:
+			module->addReduceOr(to_str(iname), IN(0), OUT(0));
+			break;
+		case Id_Red_And:
+			module->addReduceAnd(to_str(iname), IN(0), OUT(0));
+			break;
 		case Id_Mux2:
 			module->addMux(to_str(iname), IN(1), IN(2), IN(0), OUT(0));
 			break;
@@ -324,7 +331,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			break;
 		case Id_Signal:
 			{
-				Net sig = get_driver(get_input(inst, 0));
+				Net sig = get_input_net(inst, 0);
                                 if (is_set(net_map, sig)) {
                                     Wire *w = net_map.at(sig.id);
                                     if (w)
@@ -337,6 +344,9 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			break;
 		case Id_Assert:
 			module->addAssert(to_str(iname), IN(0), State::S1);
+			break;
+		case Id_Assume:
+			module->addAssume(to_str(iname), IN(0), State::S1);
 			break;
 		case Id_Const_UB32:
 		case Id_Uextend:
@@ -359,12 +369,10 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 
 	//  Connect output drivers to output
 	for (Port_Idx idx = 0; idx < nbr_outputs; idx++) {
-		Input port = get_input(self_inst, idx);
-		Net output_out = get_driver(port);
+		Net output_out = get_input_net(self_inst, idx);
 		Instance output_inst = get_net_parent(output_out);
 		log_assert(get_id(get_module(output_inst)) == Id_Output);
-		Input output_in = get_input(output_inst, 0);
-		Net output_drv = get_driver(output_in);
+		Net output_drv = get_input_net(output_inst, 0);
 		if (!has_one_connection (output_drv))
 			module->connect(get_src(net_map, output_out), get_src(net_map, output_drv));
 	}
