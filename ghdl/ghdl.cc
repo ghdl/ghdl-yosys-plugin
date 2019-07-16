@@ -210,9 +210,14 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Mux2:
 		case Id_Mux4:
 		case Id_Dff:
+		case Id_Adff:
 		case Id_Idff:
 		case Id_Eq:
                 case Id_Ne:
+                case Id_Ult:
+                case Id_Ule:
+                case Id_Ugt:
+                case Id_Uge:
 		case Id_Not:
                 case Id_Red_Or:
                 case Id_Red_And:
@@ -299,6 +304,18 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Ne:
 			module->addNe(to_str(iname), IN(0), IN(1), OUT(0));
 			break;
+		case Id_Ult:
+			module->addLt(to_str(iname), IN(0), IN(1), OUT(0));
+			break;
+		case Id_Ule:
+			module->addLe(to_str(iname), IN(0), IN(1), OUT(0));
+			break;
+		case Id_Ugt:
+			module->addGt(to_str(iname), IN(0), IN(1), OUT(0));
+			break;
+		case Id_Uge:
+			module->addGe(to_str(iname), IN(0), IN(1), OUT(0));
+			break;
 		case Id_Red_Or:
 			module->addReduceOr(to_str(iname), IN(0), OUT(0));
 			break;
@@ -317,6 +334,9 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 				net_map[get_output(inst, 0).id]->attributes["\\init"] = IN(2).as_const();
 			}
 			break;
+		case Id_Adff:
+            module->addAdff(to_str(iname), IN(0), IN(2), IN(1), OUT(0), IN(3).as_const());
+            break;
 		case Id_Mux4:
 			{
 				SigSpec Sel0 = IN(0).extract(0, 1);
