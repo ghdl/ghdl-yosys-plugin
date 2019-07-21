@@ -155,8 +155,26 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 	}
 
 	Instance self_inst = get_self_instance (m);
-	if (!is_valid(self_inst))
+	if (!is_valid(self_inst)) { // blackbox
+		module->set_bool_attribute("\\blackbox");
+
+        Port_Idx nbr_inputs = get_nbr_inputs(m);
+        for (Port_Idx idx = 0; idx < nbr_inputs; idx++) {
+            RTLIL::Wire *wire = module->addWire(
+                    to_str(get_input_name(m, idx)),
+                    get_input_width(m, idx));
+            wire->port_input = true;
+        }
+        Port_Idx nbr_outputs = get_nbr_outputs(m);
+        for (Port_Idx idx = 0; idx < nbr_outputs; idx++) {
+            RTLIL::Wire *wire = module->addWire(
+                    to_str(get_output_name(m, idx)),
+                    get_output_width(m, idx));
+            wire->port_output = true;
+        }
+        module->fixup_ports();
 		return;
+    }
 
 	//  Create input ports.
 	//  They correspond to ouputs of the self instance.
