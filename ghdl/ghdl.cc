@@ -66,6 +66,7 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 	switch(get_id(inst)) {
 #define IN(N) get_src(net_map, get_input_net(inst, (N)))
 	case Id_Signal:
+	case Id_Port:
 		return IN(0);
 	case Id_Uextend:
 		{
@@ -154,8 +155,26 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 	}
 
 	Instance self_inst = get_self_instance (m);
-	if (!is_valid(self_inst))
+	if (!is_valid(self_inst)) { // blackbox
+		module->set_bool_attribute("\\blackbox");
+
+        Port_Idx nbr_inputs = get_nbr_inputs(m);
+        for (Port_Idx idx = 0; idx < nbr_inputs; idx++) {
+            RTLIL::Wire *wire = module->addWire(
+                    to_str(get_input_name(m, idx)),
+                    get_input_width(m, idx));
+            wire->port_input = true;
+        }
+        Port_Idx nbr_outputs = get_nbr_outputs(m);
+        for (Port_Idx idx = 0; idx < nbr_outputs; idx++) {
+            RTLIL::Wire *wire = module->addWire(
+                    to_str(get_output_name(m, idx)),
+                    get_output_width(m, idx));
+            wire->port_output = true;
+        }
+        module->fixup_ports();
 		return;
+    }
 
 	//  Create input ports.
 	//  They correspond to ouputs of the self instance.
@@ -223,6 +242,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
                 case Id_Red_And:
                 case Id_Assert:  // No output
                 case Id_Assume:  // No output
+                case Id_User_None:
 			for (Port_Idx idx = 0; idx < get_nbr_outputs(im); idx++) {
 				Net o = get_output(inst, idx);
 				//  The wire may have been created for an output
@@ -235,6 +255,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			break;
 		case Id_Signal:
 		case Id_Output:
+		case Id_Port:
 		case Id_Const_UB32:
 		case Id_Uextend:
 		case Id_Extract:
@@ -349,6 +370,22 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 				module->addMux(NEW_ID, w0, w1, Sel1, OUT (0));
 			}
 			break;
+                case Id_User_None:
+                        {
+                            RTLIL::Cell *cell = module->addCell(
+                                    to_str(iname),
+                                    to_str(get_module_name(get_module(inst))));
+                            GhdlSynth::Module submod = get_module(inst);
+                            Port_Idx nbr_inputs = get_nbr_inputs(submod);
+                            for (Port_Idx idx = 0; idx < nbr_inputs; idx++) {
+                                cell->setPort(to_str(get_input_name(submod, idx)), IN(idx));
+                            }
+                            Port_Idx nbr_outputs = get_nbr_outputs(submod);
+                            for (Port_Idx idx = 0; idx < nbr_outputs; idx++) {
+                                cell->setPort(to_str(get_output_name(submod, idx)), OUT(idx));
+                            }
+                            break;
+                        }
 		case Id_Signal:
 			{
 				Net sig = get_input_net(inst, 0);
@@ -360,6 +397,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			}
 			break;
 		case Id_Output:
+                case Id_Port:
 			module->connect(OUT (0), IN (0));
 			break;
 		case Id_Assert:
