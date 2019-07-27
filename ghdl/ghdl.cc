@@ -66,6 +66,7 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 	switch(get_id(inst)) {
 #define IN(N) get_src(net_map, get_input_net(inst, (N)))
 	case Id_Signal:
+	case Id_Isignal:
 	case Id_Port:
 		return IN(0);
 	case Id_Uextend:
@@ -254,6 +255,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			}
 			break;
 		case Id_Signal:
+		case Id_Isignal:
 		case Id_Output:
 		case Id_Port:
 		case Id_Const_UB32:
@@ -387,6 +389,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
                             break;
                         }
 		case Id_Signal:
+		case Id_Isignal:
 			{
 				Net sig = get_input_net(inst, 0);
                                 if (is_set(net_map, sig)) {
