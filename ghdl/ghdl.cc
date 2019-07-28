@@ -75,8 +75,37 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 			res.extend_u0(get_width(n), false);
 			return res;
 		}
-	case Id_Const_UB32:
+    case Id_Const_UB32:
 		return SigSpec(get_param_uns32(inst, 0), get_width(n));
+    //case Id_Const_SB32:
+    //case Id_Const_UB64:
+    //case Id_Const_SB64:
+    //case Id_Const_UB128:
+    //case Id_Const_SB128:
+    case Id_Const_UL32:
+        {
+            std::vector<RTLIL::State> bits(get_width(n));
+            unsigned int val01 = get_param_uns32(inst, 0);
+            unsigned int valzx = get_param_uns32(inst, 1);
+            for (unsigned int i = 0; i < get_width(n); i++) {
+                switch(((val01 >> i)&1)+((valzx >> i)&1)*2) {
+                    case 0:
+                        bits[i] = RTLIL::State::S0;
+                        break;
+                    case 1:
+                        bits[i] = RTLIL::State::S1;
+                        break;
+                    case 2:
+                        bits[i] = RTLIL::State::Sz;
+                        break;
+                    case 3:
+                        bits[i] = RTLIL::State::Sx;
+                        break;
+                }
+            }
+            return RTLIL::SigSpec(RTLIL::Const(bits));
+        }
+    //case Id_Const_SL32:
 	case Id_Extract:
 		{
 			RTLIL::SigSpec res = IN(0);
@@ -258,7 +287,14 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Isignal:
 		case Id_Output:
 		case Id_Port:
-		case Id_Const_UB32:
+        case Id_Const_UB32:
+        case Id_Const_SB32:
+        case Id_Const_UB64:
+        case Id_Const_SB64:
+        case Id_Const_UB128:
+        case Id_Const_SB128:
+        case Id_Const_UL32:
+        case Id_Const_SL32:
 		case Id_Uextend:
 		case Id_Extract:
                 case Id_Insert:
@@ -409,7 +445,14 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Assume:
 			module->addAssume(to_str(iname), IN(0), State::S1);
 			break;
-		case Id_Const_UB32:
+        case Id_Const_UB32:
+        case Id_Const_SB32:
+        case Id_Const_UB64:
+        case Id_Const_SB64:
+        case Id_Const_UB128:
+        case Id_Const_SB128:
+        case Id_Const_UL32:
+        case Id_Const_SL32:
 		case Id_Uextend:
 		case Id_Extract:
                 case Id_Insert:
