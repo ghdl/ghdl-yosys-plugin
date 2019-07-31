@@ -271,6 +271,10 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
                 case Id_Ule:
                 case Id_Ugt:
                 case Id_Uge:
+                case Id_Slt:
+                case Id_Sle:
+                case Id_Sgt:
+                case Id_Sge:
 		case Id_Not:
                 case Id_Red_Or:
                 case Id_Red_And:
@@ -373,6 +377,18 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			break;
 		case Id_Uge:
 			module->addGe(to_str(iname), IN(0), IN(1), OUT(0));
+			break;
+		case Id_Slt:
+			module->addLt(to_str(iname), IN(0), IN(1), OUT(0), true);
+			break;
+		case Id_Sle:
+			module->addLe(to_str(iname), IN(0), IN(1), OUT(0), true);
+			break;
+		case Id_Sgt:
+			module->addGt(to_str(iname), IN(0), IN(1), OUT(0), true);
+			break;
+		case Id_Sge:
+			module->addGe(to_str(iname), IN(0), IN(1), OUT(0), true);
 			break;
 		case Id_Red_Or:
 			module->addReduceOr(to_str(iname), IN(0), OUT(0));
