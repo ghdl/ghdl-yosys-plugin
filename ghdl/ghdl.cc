@@ -75,37 +75,31 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 			res.extend_u0(get_width(n), false);
 			return res;
 		}
-    case Id_Const_UB32:
+	case Id_Const_UB32:
 		return SigSpec(get_param_uns32(inst, 0), get_width(n));
-    //case Id_Const_SB32:
-    //case Id_Const_UB64:
-    //case Id_Const_SB64:
-    //case Id_Const_UB128:
-    //case Id_Const_SB128:
-    case Id_Const_UL32:
-        {
-            std::vector<RTLIL::State> bits(get_width(n));
-            unsigned int val01 = get_param_uns32(inst, 0);
-            unsigned int valzx = get_param_uns32(inst, 1);
-            for (unsigned int i = 0; i < get_width(n); i++) {
-                switch(((val01 >> i)&1)+((valzx >> i)&1)*2) {
-                    case 0:
-                        bits[i] = RTLIL::State::S0;
-                        break;
-                    case 1:
-                        bits[i] = RTLIL::State::S1;
-                        break;
-                    case 2:
-                        bits[i] = RTLIL::State::Sz;
-                        break;
-                    case 3:
-                        bits[i] = RTLIL::State::Sx;
-                        break;
-                }
-            }
-            return RTLIL::SigSpec(RTLIL::Const(bits));
-        }
-    //case Id_Const_SL32:
+	case Id_Const_UL32:
+		{
+		       std::vector<RTLIL::State> bits(get_width(n));
+		       unsigned int val01 = get_param_uns32(inst, 0);
+		       unsigned int valzx = get_param_uns32(inst, 1);
+		       for (unsigned int i = 0; i < get_width(n); i++) {
+			switch(((val01 >> i)&1)+((valzx >> i)&1)*2) {
+			    case 0:
+				bits[i] = RTLIL::State::S0;
+				break;
+			    case 1:
+				bits[i] = RTLIL::State::S1;
+				break;
+			    case 2:
+				bits[i] = RTLIL::State::Sz;
+				break;
+			    case 3:
+				bits[i] = RTLIL::State::Sx;
+				break;
+			}
+		       }
+		       return RTLIL::SigSpec(RTLIL::Const(bits));
+		}
 	case Id_Extract:
 		{
 			RTLIL::SigSpec res = IN(0);
@@ -132,6 +126,16 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 	       {
 			RTLIL::SigSpec res;
 			unsigned nbr_in = get_nbr_inputs(get_module(inst));
+			//  ConcatN means { I0; I1; .. IN}, but append() adds
+			//  bits to the MSB side.
+			for (unsigned i = nbr_in; i > 0; i--)
+				res.append(IN(i - 1));
+			return res;
+	       }
+	case Id_Concatn:
+	       {
+			RTLIL::SigSpec res;
+			unsigned nbr_in = get_param_uns32(inst, 0);
 			//  ConcatN means { I0; I1; .. IN}, but append() adds
 			//  bits to the MSB side.
 			for (unsigned i = nbr_in; i > 0; i--)
@@ -287,20 +291,15 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Isignal:
 		case Id_Output:
 		case Id_Port:
-        case Id_Const_UB32:
-        case Id_Const_SB32:
-        case Id_Const_UB64:
-        case Id_Const_SB64:
-        case Id_Const_UB128:
-        case Id_Const_SB128:
-        case Id_Const_UL32:
-        case Id_Const_SL32:
+		case Id_Const_UB32:
+		case Id_Const_UL32:
 		case Id_Uextend:
 		case Id_Extract:
                 case Id_Insert:
 		case Id_Concat2:
 		case Id_Concat3:
 		case Id_Concat4:
+		case Id_Concatn:
 			//  Skip: these won't create cells.
 			break;
                 case Id_Edge:
@@ -445,14 +444,8 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Assume:
 			module->addAssume(to_str(iname), IN(0), State::S1);
 			break;
-        case Id_Const_UB32:
-        case Id_Const_SB32:
-        case Id_Const_UB64:
-        case Id_Const_SB64:
-        case Id_Const_UB128:
-        case Id_Const_SB128:
-        case Id_Const_UL32:
-        case Id_Const_SL32:
+		case Id_Const_UB32:
+		case Id_Const_UL32:
 		case Id_Uextend:
 		case Id_Extract:
                 case Id_Insert:
