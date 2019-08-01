@@ -260,6 +260,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
                 case Id_Nor:
                 case Id_Xnor:
 		case Id_Add:
+		case Id_Sub:
 		case Id_Mux2:
 		case Id_Mux4:
 		case Id_Dff:
@@ -356,6 +357,9 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			break;
 		case Id_Add:
 			module->addAdd(to_str(iname), IN(0), IN(1), OUT(0));
+			break;
+		case Id_Sub:
+			module->addSub(to_str(iname), IN(0), IN(1), OUT(0));
 			break;
 		case Id_Not:
 			module->addNot(to_str(iname), IN(0), OUT(0));
