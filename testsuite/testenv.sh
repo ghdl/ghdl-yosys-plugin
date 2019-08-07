@@ -2,6 +2,8 @@
 
 set -e
 
+. ../../utils.sh
+
 if [ x"$GHDL" = x ]; then
     GHDL=ghdl
 fi
@@ -12,30 +14,32 @@ fi
 
 cmd ()
 {
-    echo "$@"
+    echo "· $@"
     "$@"
 }
 
 run_yosys ()
 {
-    cmd $YOSYS -Q "$@"
+    cmd $YOSYS "$@"
 }
 
 analyze ()
 {
-    echo "analyze $@"
+    printf "${ANSI_BLUE}Analyze $@ $ANSI_NOCOLOR\n"
     cmd "$GHDL" -a $GHDL_STD_FLAGS $GHDL_FLAGS $@
 }
 
 synth ()
 {
-    echo "synthesize $@"
-    run_yosys -q -p "ghdl $@; synth_ice40 -blif out.blif"
+    travis_start "synth" "Synthesize $@"
+    run_yosys -p "ghdl $@; synth_ice40 -blif out.blif"
+    travis_finish "synth"
 }
 
 clean ()
 {
-    echo "Remove work library"
+    travis_start "rm" "Remove work library"
     "$GHDL" --remove $GHDL_STD_FLAGS
     rm -f out.blif
+    travis_finish "rm"
 }

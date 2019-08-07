@@ -1,20 +1,24 @@
 #!/bin/sh
 
+cd "$(dirname $0)"
+. ../utils.sh
+
 for d in */; do
     if [ -f $d/testsuite.sh ]; then
-        echo "############ $d"
+        travis_start "test" "$d" "$ANSI_CYAN"
         cd $d
         if ./testsuite.sh; then
-            echo "OK"
+            printf "${ANSI_GREEN}OK$ANSI_NOCOLOR\n"
         else
-            echo "FAILED!"
+            printf "${ANSI_RED}FAILED!$ANSI_NOCOLOR\n"
             exit 1
         fi
         cd ..
+        travis_finish "test"
     else
-        echo "#### Skip $d (no testsuite.sh)"
+        printf "${ANSI_YELLOW}Skip $d (no testsuite.sh)$ANSI_NOCOLOR\n"
     fi
 done
 
-echo "All tests are OK"
+printf "${ANSI_GREEN}All tests are OK$ANSI_NOCOLOR\n"
 exit 0
