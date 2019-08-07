@@ -2,13 +2,10 @@
 
 . ../testenv.sh
 
-analyze ref.vhdl
-run_yosys -q -p "ghdl vector ref; write_verilog ref.v"
+run_yosys -Q -q -p "ghdl ref.vhdl -e vector ref; write_verilog ref.v"
+run_yosys -Q -q -p "ghdl ref.vhdl vector.vhdl -e vector synth; write_verilog vector.v"
 
-analyze vector.vhdl
-run_yosys -q -p "ghdl vector synth; write_verilog vector.v"
-
-run_yosys -p '
+run_yosys -Q -p '
  read_verilog ref.v
  rename vector ref
 

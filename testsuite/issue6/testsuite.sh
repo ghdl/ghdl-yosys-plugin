@@ -2,7 +2,6 @@
 
 . ../testenv.sh
 
-analyze vector.vhdl
-synth vector
+synth 'vector.vhdl -e vector'
 
 clean

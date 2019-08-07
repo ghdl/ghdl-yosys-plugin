@@ -2,11 +2,9 @@
 
 . ../testenv.sh
 
-analyze ../../ice40hx8k/leds.vhdl
-analyze ../../ice40hx8k/spin1.vhdl
-synth leds
+src=../../ice40hx8k
 
-analyze ../../ice40hx8k/spin2.vhdl
-synth leds
+synth "$src/leds.vhdl $src/spin1.vhdl -e leds"
+synth "$src/leds.vhdl $src/spin2.vhdl -e leds"
 
 clean

@@ -2,16 +2,11 @@
 
 . ../testenv.sh
 
-analyze ../../icezum/led_on/led_on.vhdl
-synth led_on
+src=../../icezum
 
-analyze ../../icezum/blink/blink.vhdl
-synth blink
-
-analyze ../../icezum/pushbutton/pushbutton.vhdl
-synth pushbutton
-
-analyze ../../icezum/pushbutton_and/pushbutton_and.vhdl
-synth pushbutton_and
+synth "$src/led_on/led_on.vhdl -e led_on"
+synth "$src/blink/blink.vhdl -e blink"
+synth "$src/pushbutton/pushbutton.vhdl -e pushbutton"
+synth "$src/pushbutton_and/pushbutton_and.vhdl -e pushbutton_and"
 
 clean
