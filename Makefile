@@ -16,15 +16,13 @@ ALL_LDFLAGS=$(LIBGHDL_LIB) -Wl,-rpath,$(dir $(LIBGHDL_LIB)) $(LDFLAGS)
 
 ALL_CFLAGS=-fPIC -DYOSYS_ENABLE_GHDL -I$(LIBGHDL_INC) $(CFLAGS)
 
-COMPILE=$(YOSYS_CONFIG) --exec --cxx
-
 all: ghdl.$(SOEXT)
 
 ghdl.$(SOEXT): ghdl.o
-	$(COMPILE) -o $@ -shared $< $(ALL_LDFLAGS) --ldflags --ldlibs
+	$(YOSYS_CONFIG) --build $@ $< -shared $(ALL_LDFLAGS)
 
 ghdl.o: ghdl/ghdl.cc
-	$(COMPILE) -c --cxxflags -o $@ $< $(ALL_CFLAGS)
+	$(YOSYS_CONFIG) --exec --cxx -c --cxxflags -o $@ $< $(ALL_CFLAGS)
 
 clean: force
 	$(RM) -f ghdl.$(SOEXT) ghdl.o
