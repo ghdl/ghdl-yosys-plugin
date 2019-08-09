@@ -21,7 +21,7 @@ all: ghdl.$(SOEXT)
 ghdl.$(SOEXT): ghdl.o
 	$(YOSYS_CONFIG) --build $@ $< -shared $(ALL_LDFLAGS)
 
-ghdl.o: ghdl/ghdl.cc
+ghdl.o: src/ghdl.cc
 	$(YOSYS_CONFIG) --exec --cxx -c --cxxflags -o $@ $< $(ALL_CFLAGS)
 
 clean: force
