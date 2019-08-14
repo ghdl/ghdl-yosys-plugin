@@ -533,10 +533,15 @@ struct GhdlPass : public Pass {
 #ifdef YOSYS_ENABLE_GHDL
 	virtual void execute(std::vector<std::string> args, RTLIL::Design *design)
 	{
+		static bool initialized;
 		log_header(design, "Executing GHDL.\n");
 
-		//  Initialize the library. There is a counter in that function that protects against multiple calls.
-		libghdl_init ();
+		//  Initialize the library.
+		if (!initialized) {
+			initialized = 1;
+			libghdl_init ();
+			ghdlsynth__init_for_ghdl_synth();
+		}
 
 		if (args.size() == 2 && args[1] == "--disp-config") {
 			ghdlcomp__disp_config();
