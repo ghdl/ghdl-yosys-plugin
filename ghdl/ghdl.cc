@@ -536,7 +536,7 @@ struct GhdlPass : public Pass {
 		log_header(design, "Executing GHDL.\n");
 
 		//  Initialize the library. There is a counter in that function that protects against multiple calls.
-		libghdlsynth_init ();
+		libghdl_init ();
 
 		if (args.size() == 2 && args[1] == "--disp-config") {
 			ghdlcomp__disp_config();

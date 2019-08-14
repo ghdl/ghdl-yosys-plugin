@@ -14,7 +14,7 @@ SOEXT=so
 LDFLAGS=
 CFLAGS=-O
 
-ALL_LDFLAGS=$(GHDL_PREFIX)/lib/libghdlsynth.so -Wl,-rpath,$(GHDL_PREFIX)/lib $(LDFLAGS)
+ALL_LDFLAGS=$(GHDL_PREFIX)/lib/libghdl-*.so -Wl,-rpath,$(GHDL_PREFIX)/lib $(LDFLAGS)
 
 ALL_CFLAGS=-fPIC -DYOSYS_ENABLE_GHDL -I$(GHDL_PREFIX)/include $(CFLAGS)
 
