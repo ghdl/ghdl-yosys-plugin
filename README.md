@@ -1,7 +1,7 @@
 # ghdlsynth-beta
 VHDL synthesis (based on ghdl)
 
-This is awfully experimental and work in progress!
+This is experimental and work in progress!
 
 TODO: Explain purpose of program.
 
@@ -24,16 +24,25 @@ Get the latest version of GNAT:
 $ sudo apt-get install gnat-8
 ```
 
-From ghdl, build and install `libghdlsynth.so`. You may need sudo permission.
+Configure ghdl using at least `--enable-libghdl` and `--enable-synth`.
+Build and install.
 ```sh
-$ make libghdlsynth.so
-$ make install.libghdlsynth.shared
+$ ./configure --enable-libghdl --enable-synth
+$ make
+$ make install
 ```
 
 From ghdlsynth-beta:
 
 ```sh
-make GHDL_PREFIX=/usr/local/
+$ make
+```
+
+Note that if ghdl has been installed in a non-standard way or in a
+directory that is not in your PATH, you must give the name of the ghdl
+executable:
+```sh
+$ make GHDL=/my/path/to/ghdl
 ```
 
 This generates `ghdl.so`, which can be used directly:
@@ -45,18 +54,12 @@ $ yosys -m ghdl.so
 To install the module:
 
 ```sh
-make GHDL_PREFIX=/usr/local/ install
+make install
 ```
 
 ## How to build as part of yosys (not recommended)
 
-Get ghdl from github,
-build and install
-build and install `libghdlsynth.a`:
-```sh
-$ make libghdlsynth.a
-$ make install.libghdlsynth
-```
+Get and build ghdl as in the previous section.
 
 Get yosys.
 

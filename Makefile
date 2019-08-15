@@ -1,12 +1,7 @@
 # Build ghdl module for yosys
 
-# Prefix where ghdl has been installed
-GHDL_PREFIX=
-
-# GHDL_PREFIX must be defined.
-ifeq ($(GHDL_PREFIX),)
-$(error GHDL_PREFIX not defined)
-endif
+# Name or path to the ghdl executable.
+GHDL=ghdl
 
 YOSYS_CONFIG=yosys-config
 SOEXT=so
@@ -14,16 +9,19 @@ SOEXT=so
 LDFLAGS=
 CFLAGS=-O
 
-ALL_LDFLAGS=$(GHDL_PREFIX)/lib/libghdl-*.so -Wl,-rpath,$(GHDL_PREFIX)/lib $(LDFLAGS)
+LIBGHDL_LIB:=$(shell $(GHDL) --libghdl-library-path)
+LIBGHDL_INC:=$(shell $(GHDL) --libghdl-include-dir)
 
-ALL_CFLAGS=-fPIC -DYOSYS_ENABLE_GHDL -I$(GHDL_PREFIX)/include $(CFLAGS)
+ALL_LDFLAGS=$(LIBGHDL_LIB) -Wl,-rpath,$(dir $(LIBGHDL_LIB)) $(LDFLAGS)
+
+ALL_CFLAGS=-fPIC -DYOSYS_ENABLE_GHDL -I$(LIBGHDL_INC) $(CFLAGS)
 
 COMPILE=$(YOSYS_CONFIG) --exec --cxx
 
 all: ghdl.$(SOEXT)
 
 ghdl.$(SOEXT): ghdl.o
-	$(COMPILE) -o $@ -shared $< -shared $(ALL_LDFLAGS) --ldflags --ldlibs
+	$(COMPILE) -o $@ -shared $< $(ALL_LDFLAGS) --ldflags --ldlibs
 
 ghdl.o: ghdl/ghdl.cc
 	$(COMPILE) -c --cxxflags -o $@ $< $(ALL_CFLAGS)
