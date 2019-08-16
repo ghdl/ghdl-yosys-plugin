@@ -2,19 +2,8 @@
 
 . ../testenv.sh
 
-analyze test_or.vhdl
-synth test_or
-
-analyze test_xor.vhdl
-synth test_xor
-
-analyze test_nor.vhdl
-synth test_nor
-
-analyze test_nand.vhdl
-synth test_nand
-
-analyze test_xnor.vhdl
-synth test_xnor
+for f in or xor nor nand xnor; do
+  synth "test_${f}.vhdl -e test_${f}"
+done
 
 clean
