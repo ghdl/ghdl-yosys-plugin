@@ -332,88 +332,89 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 	     inst = get_next_instance(inst)) {
 		Module_Id id = get_id(inst);
 		Sname iname = get_instance_name(inst);
+        char* src_loc = get_source(inst);
 		switch (id) {
 #define IN(N) get_src(net_map, get_input_net(inst, (N)))
 #define OUT(N) get_src(net_map, get_output(inst, (N)))
 		case Id_And:
-			module->addAnd(to_str(iname), IN(0), IN(1), OUT(0));
+			module->addAnd(to_str(iname), IN(0), IN(1), OUT(0), src_loc);
 			break;
 		case Id_Or:
-			module->addOr(to_str(iname), IN(0), IN(1), OUT(0));
+			module->addOr(to_str(iname), IN(0), IN(1), OUT(0), src_loc);
 			break;
 		case Id_Xor:
-			module->addXor(to_str(iname), IN(0), IN(1), OUT(0));
+			module->addXor(to_str(iname), IN(0), IN(1), OUT(0), src_loc);
 			break;
 		case Id_Nand:
                         {
                           SigSpec r = OUT(0);
                           RTLIL::Wire *w = module->addWire(NEW_ID, r.size());
-                          module->addAnd(NEW_ID, IN(0), IN(1), w);
-                          module->addNot(to_str(iname), w, r);
+                          module->addAnd(NEW_ID, IN(0), IN(1), w, src_loc);
+                          module->addNot(to_str(iname), w, r, src_loc);
                         }
 			break;
 		case Id_Nor:
                         {
                           SigSpec r = OUT(0);
                           RTLIL::Wire *w = module->addWire(NEW_ID, r.size());
-                          module->addOr(NEW_ID, IN(0), IN(1), w);
-                          module->addNot(to_str(iname), w, r);
+                          module->addOr(NEW_ID, IN(0), IN(1), w, src_loc);
+                          module->addNot(to_str(iname), w, r, src_loc);
                         }
 			break;
 		case Id_Xnor:
-			module->addXnor(to_str(iname), IN(0), IN(1), OUT(0));
+			module->addXnor(to_str(iname), IN(0), IN(1), OUT(0), src_loc);
 			break;
 		case Id_Add:
-			module->addAdd(to_str(iname), IN(0), IN(1), OUT(0));
+			module->addAdd(to_str(iname), IN(0), IN(1), OUT(0), src_loc);
 			break;
 		case Id_Sub:
-			module->addSub(to_str(iname), IN(0), IN(1), OUT(0));
+			module->addSub(to_str(iname), IN(0), IN(1), OUT(0), src_loc);
 			break;
 		case Id_Not:
-			module->addNot(to_str(iname), IN(0), OUT(0));
+			module->addNot(to_str(iname), IN(0), OUT(0), src_loc);
 			break;
 		case Id_Eq:
-			module->addEq(to_str(iname), IN(0), IN(1), OUT(0));
+			module->addEq(to_str(iname), IN(0), IN(1), OUT(0), src_loc);
 			break;
 		case Id_Ne:
-			module->addNe(to_str(iname), IN(0), IN(1), OUT(0));
+			module->addNe(to_str(iname), IN(0), IN(1), OUT(0), src_loc);
 			break;
 		case Id_Ult:
-			module->addLt(to_str(iname), IN(0), IN(1), OUT(0));
+			module->addLt(to_str(iname), IN(0), IN(1), OUT(0), src_loc);
 			break;
 		case Id_Ule:
-			module->addLe(to_str(iname), IN(0), IN(1), OUT(0));
+			module->addLe(to_str(iname), IN(0), IN(1), OUT(0), src_loc);
 			break;
 		case Id_Ugt:
-			module->addGt(to_str(iname), IN(0), IN(1), OUT(0));
+			module->addGt(to_str(iname), IN(0), IN(1), OUT(0), src_loc);
 			break;
 		case Id_Uge:
-			module->addGe(to_str(iname), IN(0), IN(1), OUT(0));
+			module->addGe(to_str(iname), IN(0), IN(1), OUT(0), src_loc);
 			break;
 		case Id_Slt:
-			module->addLt(to_str(iname), IN(0), IN(1), OUT(0), true);
+			module->addLt(to_str(iname), IN(0), IN(1), OUT(0), true, src_loc);
 			break;
 		case Id_Sle:
-			module->addLe(to_str(iname), IN(0), IN(1), OUT(0), true);
+			module->addLe(to_str(iname), IN(0), IN(1), OUT(0), true, src_loc);
 			break;
 		case Id_Sgt:
-			module->addGt(to_str(iname), IN(0), IN(1), OUT(0), true);
+			module->addGt(to_str(iname), IN(0), IN(1), OUT(0), true, src_loc);
 			break;
 		case Id_Sge:
-			module->addGe(to_str(iname), IN(0), IN(1), OUT(0), true);
+			module->addGe(to_str(iname), IN(0), IN(1), OUT(0), true, src_loc);
 			break;
 		case Id_Red_Or:
-			module->addReduceOr(to_str(iname), IN(0), OUT(0));
+			module->addReduceOr(to_str(iname), IN(0), OUT(0), src_loc);
 			break;
 		case Id_Red_And:
-			module->addReduceAnd(to_str(iname), IN(0), OUT(0));
+			module->addReduceAnd(to_str(iname), IN(0), OUT(0), src_loc);
 			break;
 		case Id_Mux2:
-			module->addMux(to_str(iname), IN(1), IN(2), IN(0), OUT(0));
+			module->addMux(to_str(iname), IN(1), IN(2), IN(0), OUT(0), src_loc);
 			break;
 		case Id_Dff:
 		case Id_Idff:
-                        module->addDff(to_str(iname), IN(0), IN(1), OUT(0));
+                        module->addDff(to_str(iname), IN(0), IN(1), OUT(0), src_loc);
 			//  For idff, the initial value is set on the output
 			//  wire.
 			if (id == Id_Idff) {
@@ -421,7 +422,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			}
 			break;
 		case Id_Adff:
-            module->addAdff(to_str(iname), IN(0), IN(2), IN(1), OUT(0), IN(3).as_const());
+            module->addAdff(to_str(iname), IN(0), IN(2), IN(1), OUT(0), IN(3).as_const(), src_loc);
             break;
 		case Id_Mux4:
 			{
@@ -430,9 +431,9 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 				SigSpec in1 = IN(1);
 				RTLIL::Wire *w0 = module->addWire(NEW_ID, in1.size());
 				RTLIL::Wire *w1 = module->addWire(NEW_ID, in1.size());
-				module->addMux(NEW_ID, in1, IN (2), Sel0, w0);
-				module->addMux(NEW_ID, IN (3), IN (4), Sel0, w1);
-				module->addMux(NEW_ID, w0, w1, Sel1, OUT (0));
+				module->addMux(NEW_ID, in1, IN (2), Sel0, w0, src_loc);
+				module->addMux(NEW_ID, IN (3), IN (4), Sel0, w1, src_loc);
+				module->addMux(NEW_ID, w0, w1, Sel1, OUT (0), src_loc);
 			}
 			break;
                 case Id_User_None:
@@ -467,10 +468,10 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			module->connect(OUT (0), IN (0));
 			break;
 		case Id_Assert:
-			module->addAssert(to_str(iname), IN(0), State::S1);
+			module->addAssert(to_str(iname), IN(0), State::S1, src_loc);
 			break;
 		case Id_Assume:
-			module->addAssume(to_str(iname), IN(0), State::S1);
+			module->addAssume(to_str(iname), IN(0), State::S1, src_loc);
 			break;
 		case Id_Const_UB32:
 		case Id_Const_UL32:
