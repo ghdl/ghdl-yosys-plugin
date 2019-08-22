@@ -1,0 +1,6 @@
+# FTDI Port B UART
+set_io osl_data_n 8  # UART TX
+set_io isl_data_n 9  # UART RX
+
+# 12 MHz clock
+set_io isl_clk 21
