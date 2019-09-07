@@ -421,8 +421,8 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			}
 			break;
 		case Id_Adff:
-            module->addAdff(to_str(iname), IN(0), IN(2), IN(1), OUT(0), IN(3).as_const());
-            break;
+			module->addAdff(to_str(iname), IN(0), IN(2), IN(1), OUT(0), IN(3).as_const());
+			break;
 		case Id_Mux4:
 			{
 				SigSpec Sel0 = IN(0).extract(0, 1);
@@ -482,6 +482,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Concat2:
 		case Id_Concat3:
 		case Id_Concat4:
+		case Id_Concatn:
                 case Id_Edge:
 			break;
 #undef IN
