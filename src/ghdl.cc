@@ -111,21 +111,6 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 			RTLIL::SigSpec res = IN(0);
 			return res.extract(get_param_uns32(inst, 0), get_width(n));
 		}
-        case Id_Insert:
-		{
-			int pos = get_param_uns32(inst, 0);
-			RTLIL::SigSpec in0 = IN(0);
-			int size0 = in0.size();
-			RTLIL::SigSpec in1 = IN(1);
-			int size1 = in1.size();
-			RTLIL::SigSpec res;
-
-			for (int i = 0; i < size0; i++) {
-				 res.append((i >= pos && i < pos + size1) ?
-					    in1[i - pos] : in0[i]);
-			}
-			return res;
-		}
 	case Id_Concat2:
 	case Id_Concat3:
 	case Id_Concat4:
@@ -308,7 +293,6 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Utrunc:
 		case Id_Strunc:
 		case Id_Extract:
-                case Id_Insert:
 		case Id_Concat2:
 		case Id_Concat3:
 		case Id_Concat4:
@@ -478,7 +462,6 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Utrunc:
 		case Id_Strunc:
 		case Id_Extract:
-                case Id_Insert:
 		case Id_Concat2:
 		case Id_Concat3:
 		case Id_Concat4:
