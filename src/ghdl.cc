@@ -272,6 +272,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
                 case Id_Red_And:
                 case Id_Assert:  // No output
                 case Id_Assume:  // No output
+                case Id_Cover:  // No output
                 case Id_User_None:
 			for (Port_Idx idx = 0; idx < get_nbr_outputs(im); idx++) {
 				Net o = get_output(inst, idx);
@@ -455,6 +456,9 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			break;
 		case Id_Assume:
 			module->addAssume(to_str(iname), IN(0), State::S1);
+			break;
+		case Id_Cover:
+			module->addCover(to_str(iname), IN(0), State::S1);
 			break;
 		case Id_Const_UB32:
 		case Id_Const_UL32:
