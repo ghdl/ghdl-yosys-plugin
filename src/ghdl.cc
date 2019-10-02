@@ -81,32 +81,8 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 			RTLIL::SigSpec res = IN(0);
 			return res.extract(0, get_width(n));
 		}
-	case Id_Const_UB32:
-		return SigSpec(get_param_uns32(inst, 0), get_width(n));
-	case Id_Const_UL32:
-		{
-		       std::vector<RTLIL::State> bits(get_width(n));
-		       unsigned int val01 = get_param_uns32(inst, 0);
-		       unsigned int valzx = get_param_uns32(inst, 1);
-		       for (unsigned int i = 0; i < get_width(n); i++) {
-			switch(((val01 >> i)&1)+((valzx >> i)&1)*2) {
-			    case 0:
-				bits[i] = RTLIL::State::S0;
-				break;
-			    case 1:
-				bits[i] = RTLIL::State::S1;
-				break;
-			    case 2:
-				bits[i] = RTLIL::State::Sz;
-				break;
-			    case 3:
-				bits[i] = RTLIL::State::Sx;
-				break;
-			}
-		       }
-		       return RTLIL::SigSpec(RTLIL::Const(bits));
-		}
 	case Id_Const_Bit:
+	case Id_Const_UB32:
 		{
 		       const unsigned wd = get_width(n);
 		       std::vector<RTLIL::State> bits(wd);
@@ -115,6 +91,37 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 			       if (i % 32 == 0)
 			               val = get_param_uns32(inst, i / 32);
 			       bits[i] = (val >> i) & 1 ? RTLIL::State::S1 : RTLIL::State::S0;
+		       }
+		       return RTLIL::SigSpec(RTLIL::Const(bits));
+		}
+	case Id_Const_Log:
+	case Id_Const_UL32:
+	        {
+		       const unsigned wd = get_width(n);
+		       std::vector<RTLIL::State> bits(wd);
+		       unsigned int val01;
+		       unsigned int valzx;
+		       for (unsigned i = 0; i < wd; i++) {
+			       if (i % 32 == 0) {
+			               val01 = get_param_uns32(inst, 2*(i / 32));
+				       valzx = get_param_uns32(inst, 2*(i / 32) + 1);
+			       }
+			       switch(((val01 >> i)&1)+((valzx >> i)&1)*2)
+			       {
+			       case 0:
+			               bits[i] = RTLIL::State::S0;
+				       break;
+			       case 1:
+				       bits[i] = RTLIL::State::S1;
+				       break;
+			       case 2:
+				       bits[i] = RTLIL::State::Sz;
+				       break;
+			       case 3:
+				       bits[i] = RTLIL::State::Sx;
+				       break;
+			       }
+
 		       }
 		       return RTLIL::SigSpec(RTLIL::Const(bits));
 		}
@@ -303,6 +310,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Const_UB32:
 		case Id_Const_UL32:
 		case Id_Const_Bit:
+		case Id_Const_Log:
 		case Id_Uextend:
 		case Id_Utrunc:
 		case Id_Strunc:
@@ -476,6 +484,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Const_UB32:
 		case Id_Const_UL32:
 		case Id_Const_Bit:
+		case Id_Const_Log:
 		case Id_Uextend:
 		case Id_Utrunc:
 		case Id_Strunc:
