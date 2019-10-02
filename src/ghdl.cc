@@ -94,6 +94,14 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 		       }
 		       return RTLIL::SigSpec(RTLIL::Const(bits));
 		}
+	case Id_Const_Z:
+		{
+		       return SigSpec(RTLIL::State::Sz, get_width(n));
+		}
+	case Id_Const_X:
+		{
+		       return SigSpec(RTLIL::State::Sx, get_width(n));
+		}
 	case Id_Const_Log:
 	case Id_Const_UL32:
 	        {
@@ -311,6 +319,8 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Const_UL32:
 		case Id_Const_Bit:
 		case Id_Const_Log:
+		case Id_Const_Z:
+		case Id_Const_X:
 		case Id_Uextend:
 		case Id_Utrunc:
 		case Id_Strunc:
@@ -485,6 +495,8 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Const_UL32:
 		case Id_Const_Bit:
 		case Id_Const_Log:
+		case Id_Const_Z:
+		case Id_Const_X:
 		case Id_Uextend:
 		case Id_Utrunc:
 		case Id_Strunc:
