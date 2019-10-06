@@ -12,6 +12,10 @@ if [ x"$YOSYS" = x ]; then
     YOSYS="yosys -m ../../ghdl.so"
 fi
 
+if [ x"$SYMBIYOSYS" = x ]; then
+    SYMBIYOSYS="sby --yosys \"yosys -m ../../ghdl.so\""
+fi
+
 cmd ()
 {
     echo "· $@"
@@ -21,6 +25,11 @@ cmd ()
 run_yosys ()
 {
     cmd $YOSYS "$@"
+}
+
+run_symbiyosys ()
+{
+    cmd $SYMBIYOSYS "$@"
 }
 
 analyze ()
@@ -34,6 +43,13 @@ synth ()
     travis_start "synth" "Synthesize $@"
     run_yosys -p "ghdl $@; synth_ice40 -blif out.blif"
     travis_finish "synth"
+}
+
+formal ()
+{
+    travis_start "formal" "Verify $@"
+    run_symbiyosys -f -d work $@.sby
+    travis_finish "formal"
 }
 
 clean ()
