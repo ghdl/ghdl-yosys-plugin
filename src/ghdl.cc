@@ -299,6 +299,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
                 case Id_Red_And:
                 case Id_Lsr:
                 case Id_Lsl:
+                case Id_Asr:
                 case Id_Assert:  // No output
                 case Id_Assume:  // No output
                 case Id_Cover:  // No output
@@ -431,6 +432,9 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			break;
 		case Id_Lsr:
 			module->addShr(to_str(iname), IN(0), IN(1), OUT(0));
+			break;
+		case Id_Asr:
+			module->addSshr(to_str(iname), IN(0), IN(1), OUT(0), true);
 			break;
 		case Id_Mux2:
 			module->addMux(to_str(iname), IN(1), IN(2), IN(0), OUT(0));
