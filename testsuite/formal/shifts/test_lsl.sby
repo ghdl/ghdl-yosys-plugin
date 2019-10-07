@@ -1,0 +1,13 @@
+[options]
+depth 20
+mode prove
+
+[engines]
+smtbmc z3
+
+[script]
+ghdl --std=08 test_lsl.vhd -e test_lsl
+prep -top test_lsl
+
+[files]
+test_lsl.vhd

@@ -1,0 +1,13 @@
+[options]
+depth 20
+mode prove
+
+[engines]
+smtbmc z3
+
+[script]
+ghdl --std=08 test_asr.vhd -e test_asr
+prep -top test_asr
+
+[files]
+test_asr.vhd

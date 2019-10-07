@@ -12,6 +12,10 @@ if [ x"$YOSYS" = x ]; then
     YOSYS="yosys -m ../../ghdl.so"
 fi
 
+if [ x"$SYMBIYOSYS" = x ]; then
+    SYMBIYOSYS="sby"
+fi
+
 cmd ()
 {
     echo "· $@"
@@ -21,6 +25,11 @@ cmd ()
 run_yosys ()
 {
     cmd $YOSYS "$@"
+}
+
+run_symbiyosys ()
+{
+    cmd $SYMBIYOSYS --yosys "$YOSYS" "$@"
 }
 
 analyze ()
@@ -36,10 +45,15 @@ synth ()
     travis_finish "synth"
 }
 
+formal ()
+{
+    travis_start "formal" "Verify $@"
+    run_symbiyosys -f -d work $@.sby
+    travis_finish "formal"
+}
+
 clean ()
 {
-    travis_start "rm" "Remove work library"
     "$GHDL" --remove $GHDL_STD_FLAGS
     rm -f out.blif
-    travis_finish "rm"
 }
