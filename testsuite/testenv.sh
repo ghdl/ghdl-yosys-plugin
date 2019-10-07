@@ -13,7 +13,7 @@ if [ x"$YOSYS" = x ]; then
 fi
 
 if [ x"$SYMBIYOSYS" = x ]; then
-    SYMBIYOSYS="sby --yosys \"yosys -m ../../ghdl.so\""
+    SYMBIYOSYS="sby"
 fi
 
 cmd ()
@@ -29,7 +29,7 @@ run_yosys ()
 
 run_symbiyosys ()
 {
-    cmd $SYMBIYOSYS "$@"
+    cmd $SYMBIYOSYS --yosys "$YOSYS" "$@"
 }
 
 analyze ()
