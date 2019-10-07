@@ -18,7 +18,7 @@ end entity test_asr;
 
 architecture rtl of test_asr is
 
-  signal index : natural range 0 to 8;
+  signal index : natural;
 
 begin
 
@@ -28,9 +28,9 @@ begin
       if reset = '1' then
         index <= 0;
         asr   <= x"00";
-      elsif index <= 8 then
+      else
         asr <= shift_right(sig, index);
-        if index <= 7 then
+        if index < natural'high then
           index <= index + 1;
         end if;
       end if;
@@ -72,7 +72,7 @@ begin
     shift_aright_5 : assert always not reset and index = 5 -> next asr = sig_d_7(7 downto 3) & sig_d(7 downto 5);
     shift_aright_6 : assert always not reset and index = 6 -> next asr = sig_d_7(7 downto 2) & sig_d(7 downto 6);
     shift_aright_7 : assert always not reset and index = 7 -> next asr = sig_d_7(7 downto 1) & sig_d(7);
-    shift_aright_8 : assert always not reset and index = 8 -> next asr = sig_d_7;
+    shift_aright_8 : assert always not reset and index >= 8 -> next asr = sig_d_7;
 
   end block Formal;
 

@@ -20,7 +20,7 @@ end entity test_lsl;
 
 architecture rtl of test_lsl is
 
-  signal index : natural range 0 to 8;
+  signal index : natural;
 
 begin
 
@@ -31,10 +31,10 @@ begin
         index <= 0;
         lslu  <= x"00";
         lsls  <= x"00";
-      elsif index <= 8 then
+      else
         lslu <= shift_left(unsig, index);
         lsls <= shift_left(sig, index);
-        if index <= 7 then
+        if index < natural'high then
           index <= index + 1;
         end if;
       end if;
@@ -75,7 +75,7 @@ begin
     shift_left_uns_5 : assert always not reset and index = 5 -> next lslu = uns_d(2 downto 0) & "00000";
     shift_left_uns_6 : assert always not reset and index = 6 -> next lslu = uns_d(1 downto 0) & "000000";
     shift_left_uns_7 : assert always not reset and index = 7 -> next lslu = uns_d(0) & "0000000";
-    shift_left_uns_8 : assert always not reset and index = 8 -> next lslu = 0;
+    shift_left_uns_8 : assert always not reset and index >= 8 -> next lslu = 0;
 
     shift_left_sgn_0 : assert always not reset and index = 0 -> next lsls = sig_d;
     shift_left_sgn_1 : assert always not reset and index = 1 -> next lsls = sig_d(6 downto 0) & '0';
@@ -85,7 +85,7 @@ begin
     shift_left_sgn_5 : assert always not reset and index = 5 -> next lsls = sig_d(2 downto 0) & "00000";
     shift_left_sgn_6 : assert always not reset and index = 6 -> next lsls = sig_d(1 downto 0) & "000000";
     shift_left_sgn_7 : assert always not reset and index = 7 -> next lsls = sig_d(0) & "0000000";
-    shift_left_sgn_8 : assert always not reset and index = 8 -> next lsls = "00000000";
+    shift_left_sgn_8 : assert always not reset and index >= 8 -> next lsls = "00000000";
 
   end block Formal;
 

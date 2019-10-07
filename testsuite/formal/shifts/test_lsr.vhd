@@ -18,7 +18,7 @@ end entity test_lsr;
 
 architecture rtl of test_lsr is
 
-  signal index : natural range 0 to 8;
+  signal index : natural;
 
 begin
 
@@ -28,9 +28,9 @@ begin
       if reset = '1' then
         index <= 0;
         lsr  <= x"00";
-      elsif index <= 8 then
+      else
         lsr <= shift_right(unsig, index);
-        if index <= 7 then
+        if index < natural'high then
           index <= index + 1;
         end if;
       end if;
@@ -68,7 +68,7 @@ begin
     shift_right_5 : assert always not reset and index = 5 -> next lsr = "00000" & uns_d(7 downto 5);
     shift_right_6 : assert always not reset and index = 6 -> next lsr = "000000" & uns_d(7 downto 6);
     shift_right_7 : assert always not reset and index = 7 -> next lsr = "0000000" & uns_d(7);
-    shift_right_8 : assert always not reset and index = 8 -> next lsr = 0;
+    shift_right_8 : assert always not reset and index >= 8 -> next lsr = 0;
 
   end block Formal;
 
