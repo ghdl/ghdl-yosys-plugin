@@ -54,8 +54,6 @@ formal ()
 
 clean ()
 {
-    travis_start "rm" "Remove work library"
     "$GHDL" --remove $GHDL_STD_FLAGS
     rm -f out.blif
-    travis_finish "rm"
 }
