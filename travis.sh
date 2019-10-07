@@ -5,7 +5,7 @@ set -e
 cd "$(dirname $0)"
 . ./utils.sh
 
-prefix='//opt/ghdl'
+prefix='/opt/ghdl'
 
 #--
 travis_start "ghdl" "[Build] ghdl/synth:latest" "$ANSI_MAGENTA"
@@ -67,11 +67,28 @@ EOF
 
 travis_finish "ghdlsynth"
 #---
-travis_start "testsuite" "[Test] testsuite" "$ANSI_MAGENTA"
+travis_start "formal" "[Build] ghdl/synth:formal" "$ANSI_MAGENTA"
 
-docker run --rm -t -e TRAVIS=$TRAVIS -v /$(pwd)://src -w //src -e YOSYS='yosys -m ghdl' ghdl/synth:beta bash -c "$(cat <<EOF
+docker build -t ghdl/synth:formal . -f- <<-EOF
+FROM ghdl/synth:beta
+
+COPY --from=ghdl/cache:formal ./z3 /opt/z3
+COPY --from=ghdl/cache:formal ./symbiyosys /usr/local
+
+RUN apt-get update -qq \
+ && DEBIAN_FRONTEND=noninteractive apt-get -y install --no-install-recommends \
+    python3 \
+ && apt-get autoclean && apt-get clean && apt-get -y autoremove \
+ && rm -rf /var/lib/apt/lists/*
+
+ENV PATH=/opt/z3/bin:\$PATH
+EOF
+
+travis_finish "formal"
+#---
+printf "${ANSI_MAGENTA}[Test] testsuite ${ANSI_NOCOLOR}\n"
+
+docker run --rm -t -e TRAVIS=$TRAVIS -v /$(pwd)://src -w //src -e YOSYS='yosys -m ghdl' ghdl/synth:formal bash -c "$(cat <<EOF
 ./testsuite/testsuite.sh
 EOF
 )"
-
-travis_finish "testsuite"
