@@ -75,6 +75,12 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 			res.extend_u0(get_width(n), false);
 			return res;
 		}
+	case Id_Sextend:
+		{
+			RTLIL::SigSpec res = IN(0);
+			res.extend_u0(get_width(n), true);
+			return res;
+		}
 	case Id_Utrunc:
 	case Id_Strunc:
 		{
@@ -325,6 +331,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Const_Z:
 		case Id_Const_X:
 		case Id_Uextend:
+		case Id_Sextend:
 		case Id_Utrunc:
 		case Id_Strunc:
 		case Id_Extract:
@@ -510,6 +517,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Const_Z:
 		case Id_Const_X:
 		case Id_Uextend:
+		case Id_Sextend:
 		case Id_Utrunc:
 		case Id_Strunc:
 		case Id_Extract:
