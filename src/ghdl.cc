@@ -88,7 +88,6 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 			return res.extract(0, get_width(n));
 		}
 	case Id_Const_Bit:
-	case Id_Const_UB32:
 		{
 		       const unsigned wd = get_width(n);
 		       std::vector<RTLIL::State> bits(wd);
@@ -96,6 +95,18 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 		       for (unsigned i = 0; i < wd; i++) {
 			       if (i % 32 == 0)
 			               val = get_param_uns32(inst, i / 32);
+			       bits[i] = (val >> i) & 1 ? RTLIL::State::S1 : RTLIL::State::S0;
+		       }
+		       return RTLIL::SigSpec(RTLIL::Const(bits));
+		}
+	case Id_Const_UB32:
+		{
+		       const unsigned wd = get_width(n);
+		       std::vector<RTLIL::State> bits(wd);
+		       int32_t val = get_param_uns32(inst, 0);
+		       for (unsigned i = 0; i < wd; i++) {
+                   // signed right shift is technically implementation defined
+                   // but arithmetic in practice
 			       bits[i] = (val >> i) & 1 ? RTLIL::State::S1 : RTLIL::State::S0;
 		       }
 		       return RTLIL::SigSpec(RTLIL::Const(bits));
@@ -109,7 +120,6 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 		       return SigSpec(RTLIL::State::Sx, get_width(n));
 		}
 	case Id_Const_Log:
-	case Id_Const_UL32:
 	        {
 		       const unsigned wd = get_width(n);
 		       std::vector<RTLIL::State> bits(wd);
@@ -120,6 +130,32 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 			               val01 = get_param_uns32(inst, 2*(i / 32));
 				       valzx = get_param_uns32(inst, 2*(i / 32) + 1);
 			       }
+			       switch(((val01 >> i)&1)+((valzx >> i)&1)*2)
+			       {
+			       case 0:
+			               bits[i] = RTLIL::State::S0;
+				       break;
+			       case 1:
+				       bits[i] = RTLIL::State::S1;
+				       break;
+			       case 2:
+				       bits[i] = RTLIL::State::Sz;
+				       break;
+			       case 3:
+				       bits[i] = RTLIL::State::Sx;
+				       break;
+			       }
+
+		       }
+		       return RTLIL::SigSpec(RTLIL::Const(bits));
+		}
+	case Id_Const_UL32:
+	        {
+		       const unsigned wd = get_width(n);
+		       std::vector<RTLIL::State> bits(wd);
+		       int32_t val01 = get_param_uns32(inst, 0);
+		       int32_t valzx = get_param_uns32(inst, 0);
+		       for (unsigned i = 0; i < wd; i++) {
 			       switch(((val01 >> i)&1)+((valzx >> i)&1)*2)
 			       {
 			       case 0:
