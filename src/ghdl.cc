@@ -95,7 +95,7 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 		       for (unsigned i = 0; i < wd; i++) {
 			       if (i % 32 == 0)
 			               val = get_param_uns32(inst, i / 32);
-			       bits[i] = (val >> i) & 1 ? RTLIL::State::S1 : RTLIL::State::S0;
+			       bits[i] = (val >> (i%32)) & 1 ? RTLIL::State::S1 : RTLIL::State::S0;
 		       }
 		       return RTLIL::SigSpec(RTLIL::Const(bits));
 		}
@@ -103,11 +103,10 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 		{
 		       const unsigned wd = get_width(n);
 		       std::vector<RTLIL::State> bits(wd);
-		       int32_t val = get_param_uns32(inst, 0);
+		       unsigned int val = get_param_uns32(inst, 0);
 		       for (unsigned i = 0; i < wd; i++) {
-                   // signed right shift is technically implementation defined
-                   // but arithmetic in practice
-			       bits[i] = (val >> i) & 1 ? RTLIL::State::S1 : RTLIL::State::S0;
+                   unsigned idx = i < 32 ? i : 31;
+			       bits[i] = (val >> idx) & 1 ? RTLIL::State::S1 : RTLIL::State::S0;
 		       }
 		       return RTLIL::SigSpec(RTLIL::Const(bits));
 		}
@@ -130,7 +129,7 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 			               val01 = get_param_uns32(inst, 2*(i / 32));
 				       valzx = get_param_uns32(inst, 2*(i / 32) + 1);
 			       }
-			       switch(((val01 >> i)&1)+((valzx >> i)&1)*2)
+			       switch(((val01 >> (i%32))&1)+((valzx >> (i%32))&1)*2)
 			       {
 			       case 0:
 			               bits[i] = RTLIL::State::S0;
@@ -153,10 +152,11 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 	        {
 		       const unsigned wd = get_width(n);
 		       std::vector<RTLIL::State> bits(wd);
-		       int32_t val01 = get_param_uns32(inst, 0);
-		       int32_t valzx = get_param_uns32(inst, 0);
+		       unsigned int val01 = get_param_uns32(inst, 0);
+		       unsigned int valzx = get_param_uns32(inst, 0);
 		       for (unsigned i = 0; i < wd; i++) {
-			       switch(((val01 >> i)&1)+((valzx >> i)&1)*2)
+                   unsigned idx = i < 32 ? i : 31;
+			       switch(((val01 >> idx)&1)+((valzx >> idx)&1)*2)
 			       {
 			       case 0:
 			               bits[i] = RTLIL::State::S0;
