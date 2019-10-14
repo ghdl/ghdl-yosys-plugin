@@ -92,7 +92,7 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 		{
 		       const unsigned wd = get_width(n);
 		       std::vector<RTLIL::State> bits(wd);
-		       unsigned int val;
+		       unsigned int val = 0;
 		       for (unsigned i = 0; i < wd; i++) {
 			       if (i % 32 == 0)
 			               val = get_param_uns32(inst, i / 32);
@@ -113,8 +113,8 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 	        {
 		       const unsigned wd = get_width(n);
 		       std::vector<RTLIL::State> bits(wd);
-		       unsigned int val01;
-		       unsigned int valzx;
+		       unsigned int val01 = 0;
+		       unsigned int valzx = 0;
 		       for (unsigned i = 0; i < wd; i++) {
 			       if (i % 32 == 0) {
 			               val01 = get_param_uns32(inst, 2*(i / 32));
