@@ -36,6 +36,8 @@ static std::string to_str(Sname name)
 	std::string res;
 	bool is_sys = false;
 
+	log_assert(is_valid(name));
+
 	for (Sname pfx = name; is_valid(pfx); pfx = get_sname_prefix(pfx)) {
 		switch (get_sname_kind(pfx)) {
 		case Sname_Artificial:
@@ -124,7 +126,7 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 		       std::vector<RTLIL::State> bits(wd);
 		       unsigned int val = get_param_uns32(inst, 0);
 		       for (unsigned i = 0; i < wd; i++) {
-                   unsigned idx = i < 32 ? i : 31;
+			       unsigned idx = i < 32 ? i : 31;
 			       bits[i] = (val >> idx) & 1 ? RTLIL::State::S1 : RTLIL::State::S0;
 		       }
 		       return RTLIL::SigSpec(RTLIL::Const(bits));
@@ -345,6 +347,14 @@ static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net
 	}
 }
 
+static void add_formal_input(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net_map, Instance inst, const char *cellname)
+{
+	RTLIL::Cell *cell = module->addCell(to_str(get_instance_name(inst)), cellname);
+	Net n = get_output(inst, 0);
+	cell->setParam("\\WIDTH", get_width(n));
+	cell->setPort("\\Y", get_src(net_map, n));
+}
+
 static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 {
 	std::string module_name = to_str(get_module_name(m));
@@ -467,6 +477,10 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
                 case Id_Assume:  // No output
                 case Id_Cover:  // No output
 		case Id_Assert_Cover:  // No output
+		case Id_Allconst:
+		case Id_Allseq:
+		case Id_Anyconst:
+		case Id_Anyseq:
                 case Id_User_None:
 			for (Port_Idx idx = 0; idx < get_nbr_outputs(im); idx++) {
 				Net o = get_output(inst, idx);
@@ -479,12 +493,12 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			}
 			break;
 		case Id_Memory:
-		  import_memory(module, net_map, inst);
-		  break;
+			import_memory(module, net_map, inst);
+			break;
 		case Id_Mem_Rd:
 		case Id_Mem_Wr_Sync:
-		  //  Handle by import_memory.
-		  break;
+			//  Handle by import_memory.
+			break;
 		case Id_Signal:
 		case Id_Isignal:
 		case Id_Output:
@@ -685,6 +699,18 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Cover:
 		case Id_Assert_Cover:
 			module->addCover(to_str(iname), IN(0), State::S1);
+			break;
+		case Id_Allconst:
+			add_formal_input(module, net_map, inst, "$allconst");
+			break;
+		case Id_Allseq:
+			add_formal_input(module, net_map, inst, "$allseq");
+			break;
+		case Id_Anyconst:
+			add_formal_input(module, net_map, inst, "$anyconst");
+			break;
+		case Id_Anyseq:
+			add_formal_input(module, net_map, inst, "$anyseq");
 			break;
 		case Id_Memory:
 		        break;
