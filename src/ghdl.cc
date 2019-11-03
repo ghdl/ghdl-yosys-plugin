@@ -512,6 +512,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
                 case Id_Asr:
 		case Id_Smul:
 		case Id_Umul:
+		case Id_Smod:
 		case Id_Allconst:
 		case Id_Allseq:
 		case Id_Anyconst:
@@ -671,6 +672,9 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			break;
 		case Id_Umul:
 			module->addMul(to_str(iname), IN(0), IN(1), OUT(0), false);
+			break;
+		case Id_Smod:
+			module->addMod(to_str(iname), IN(0), IN(1), OUT(0), true);
 			break;
 		case Id_Mux2:
 			module->addMux(to_str(iname), IN(1), IN(2), IN(0), OUT(0));
