@@ -226,6 +226,7 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 		log_cmd_error("wire not found for %s\n", to_str(get_module_name(get_module(inst))).c_str());
 		break;
 	}
+#undef IN
 }
 
 static bool is_set(std::vector<RTLIL::Wire *> &net_map, Net n)
@@ -246,13 +247,12 @@ static void set_src(std::vector<RTLIL::Wire *> &net_map, Net n, Wire *wire)
 	net_map[n.id] = wire;
 }
 
+//  INST is an Id_Memory or an Id_Memory_Init
+//  All the inputs have been connected, all the outputs have been pushed.
 static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net_map, Instance inst)
 {
-	Input port_inp;
-	Instance port;
 	Net mem_o = get_output(inst, 0);
-	Net port_o;
-	unsigned prio = 0;
+	Input first_port = get_first_sink (mem_o);
 	std::string mem_str = to_str(get_instance_name(inst));
 
 	//  Memories appear only once.
@@ -260,91 +260,126 @@ static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net
 
 	//  Create memory.
 	RTLIL::Memory *memory = new RTLIL::Memory;
-	memory->name = mem_str;
-
-	//  Will be set later.
-	memory->width = 0;
-	memory->size = 0;
-	memory->start_offset = 0;
-
-	port_inp = get_first_sink(mem_o);
-	port = get_input_parent(port_inp);
+	memory->name = "$mem$" + mem_str;
 
 	//  Add it to module.
 	module->memories[memory->name] = memory;
 
-	//  TODO: initial value.
-
-	//  Generate cells.
-	while (port_inp.id != 0) {
-		unsigned port_width;
-		unsigned port_abits;
-
-		port = get_input_parent(port_inp);
-		switch(get_id(port)) {
+	//  Count number of read and write ports.
+	//  Extract width, size, abits.
+	unsigned nbr_rd = 0;
+	unsigned nbr_wr = 0;
+	unsigned width = 0;
+	unsigned abits = 0;
+	for (Input port = first_port; port.id != 0;) {
+		Instance port_inst = get_input_parent(port);
+		Net addr;
+		Net dat;
+		switch(get_id(port_inst)) {
 		case Id_Mem_Rd:
-		{
-			Net o = get_output(port, 1);
-			port_width = get_width(o);
-			port_abits = get_width(get_input_net(port, 1));
-			RTLIL::Cell *cell = module->addCell(to_str(get_instance_name(port)), "$memrd");
-			RTLIL::Wire *wire = module->addWire(to_str(get_output_name(get_module(port), 1)), port_width);
-
-			cell->setPort("\\CLK", RTLIL::SigSpec(RTLIL::State::Sx, 1));
-			cell->setPort("\\EN", RTLIL::SigSpec(RTLIL::State::Sx, 1));
-			//  Set laster in pass 2
-			//  cell->setPort("\\ADDR", addr_sig);
-			cell->setPort("\\DATA", RTLIL::SigSpec(wire));
-
-			cell->parameters["\\MEMID"] = RTLIL::Const(mem_str);
-			cell->parameters["\\ABITS"] = RTLIL::Const(port_abits);
-			cell->parameters["\\WIDTH"] = RTLIL::Const(port_width);
-
-			cell->parameters["\\CLK_ENABLE"] = RTLIL::Const(0);
-			cell->parameters["\\CLK_POLARITY"] = RTLIL::Const(0);
-			cell->parameters["\\TRANSPARENT"] = RTLIL::Const(0);
-
-			set_src(net_map, o, wire);
-
-			port_o = get_output(port, 0);
-			set_src(net_map, port_o, reinterpret_cast<Wire*>(cell));
-		}
-		break;
+			dat = get_output(port_inst, 1);
+			addr = get_input_net(port_inst, 1);
+			nbr_rd++;
+			break;
 		case Id_Mem_Wr_Sync:
-		{
-			RTLIL::Cell *cell = module->addCell(to_str(get_instance_name(port)), "$memwr");
-
-			port_width = get_width(get_input_net(port, 4));
-			port_abits = get_width(get_input_net(port, 1));
-
-			//  Set later: addr, data, clk, en
-
-			cell->parameters["\\MEMID"] = RTLIL::Const(mem_str);
-			cell->parameters["\\ABITS"] = RTLIL::Const(port_abits);
-			cell->parameters["\\WIDTH"] = RTLIL::Const(port_width);
-
-			cell->parameters["\\CLK_ENABLE"] = RTLIL::Const(1);
-			cell->parameters["\\CLK_POLARITY"] = RTLIL::Const(1);
-
-			cell->parameters["\\PRIORITY"] = RTLIL::Const(prio++);
-
-			port_o = get_output(port, 0);
-			set_src(net_map, port_o, reinterpret_cast<Wire*>(cell));
-		}
-		break;
+			dat = get_input_net(port_inst, 4);
+			addr = get_input_net(port_inst, 1);
+			nbr_wr++;
+			break;
 		default:
 			log_assert(0);
 		}
 
-		if (memory->width == 0) {
-			memory->width = port_width;
-			memory->size = get_width(mem_o) / memory->width;
+		if (width == 0) {
+			width = get_width(dat);
+			abits = get_width(addr);
 		} else {
-			log_assert(port_width == (unsigned)memory->width);
+			//  All the ports must have the same width and abits.
+			log_assert(width == get_width(dat));
+			log_assert(abits == get_width(addr));
 		}
-
-		port_inp = get_first_sink(port_o);
+		port = get_first_sink(get_output(port_inst, 0));
 	}
+
+	unsigned size = get_width(mem_o) / width;
+	memory->width = width;
+	memory->size = size;
+	memory->start_offset = 0;
+
+	//  Create the memory.
+	Cell *mem = module->addCell(mem_str, "$mem");
+	mem->parameters["\\MEMID"] = Const(mem_str);
+	mem->parameters["\\WIDTH"] = Const(width);
+	mem->parameters["\\OFFSET"] = Const(0);
+	mem->parameters["\\SIZE"] = Const(size);
+	mem->parameters["\\ABITS"] = Const(abits);
+
+	Const init_data;
+	switch (get_id(inst)) {
+	case Id_Memory:
+		init_data = Const(State::Sx, size * width);
+		break;
+	case Id_Memory_Init:
+		init_data = get_src(net_map, get_input_net(inst, 0)).as_const();
+		break;
+	default:
+		log_assert(0);
+	}
+	mem->parameters["\\INIT"] = init_data;
+	mem->parameters["\\WR_PORTS"] = Const(nbr_wr);
+	mem->parameters["\\RD_PORTS"] = Const(nbr_rd);
+
+	//  Connect.
+	SigSpec rd_clk;
+	SigSpec rd_addr;
+	SigSpec rd_data;
+	SigSpec rd_en;
+	std::vector<RTLIL::State> rd_clk_en;
+	SigSpec wr_clk;
+	SigSpec wr_addr;
+	SigSpec wr_data;
+	SigSpec wr_en;
+	for (Input port = first_port; port.id != 0; ) {
+		Instance port_inst = get_input_parent(port);
+#define IN(N) get_src(net_map, get_input_net(port_inst, (N)))
+#define OUT(N) get_src(net_map, get_output(port_inst, (N)))
+		switch(get_id(port_inst)) {
+		case Id_Mem_Rd:
+			rd_clk_en.push_back(RTLIL::State::S0);
+			rd_clk.append(RTLIL::State::Sx);
+			rd_addr.append(IN(1));
+			rd_data.append(OUT(1));
+			rd_en.append(Const(1, 1));
+			break;
+		case Id_Mem_Wr_Sync:
+			wr_clk.append(IN(2));
+			wr_addr.append(IN(1));
+			wr_data.append(IN(4));
+			wr_en.append(SigSpec(SigBit(IN(3)), width));
+			break;
+		default:
+			log_assert(0);
+		}
+		port = get_first_sink(get_output(port_inst, 0));
+	}
+#undef IN
+#undef OUT
+	mem->parameters["\\RD_CLK_ENABLE"] = nbr_rd ? Const(rd_clk_en) : Const(0, 1);
+	mem->parameters["\\RD_CLK_POLARITY"] = Const(RTLIL::State::S1, nbr_rd ? nbr_rd : 1);
+	mem->parameters["\\RD_TRANSPARENT"] = Const(RTLIL::State::S0, nbr_rd ? nbr_rd : 1);
+
+	mem->setPort("\\RD_CLK", rd_clk);
+	mem->setPort("\\RD_ADDR", rd_addr);
+	mem->setPort("\\RD_DATA", rd_data);
+	mem->setPort("\\RD_EN", rd_en);
+
+	mem->parameters["\\WR_CLK_ENABLE"] = Const(RTLIL::State::S1, nbr_wr ? nbr_wr : 1);
+	mem->parameters["\\WR_CLK_POLARITY"] = Const(RTLIL::State::S1, nbr_wr ? nbr_wr : 1);
+
+	mem->setPort("\\WR_CLK", wr_clk);
+	mem->setPort("\\WR_ADDR", wr_addr);
+	mem->setPort("\\WR_DATA", wr_data);
+	mem->setPort("\\WR_EN", wr_en);
 }
 
 static void add_formal_input(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net_map, Instance inst, const char *cellname)
@@ -375,6 +410,9 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		log_cmd_error("Unsupported: submodules in `%s'.\n", module_name.c_str());
 		return;
 	}
+
+	//  List of all memories.
+	std::vector<Instance> memories;
 
 	Instance self_inst = get_self_instance (m);
 	if (!is_valid(self_inst)) { // blackbox
@@ -473,14 +511,11 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
                 case Id_Asr:
 		case Id_Smul:
 		case Id_Umul:
-                case Id_Assert:  // No output
-                case Id_Assume:  // No output
-                case Id_Cover:  // No output
-		case Id_Assert_Cover:  // No output
 		case Id_Allconst:
 		case Id_Allseq:
 		case Id_Anyconst:
 		case Id_Anyseq:
+		case Id_Mem_Rd:
                 case Id_User_None:
 			for (Port_Idx idx = 0; idx < get_nbr_outputs(im); idx++) {
 				Net o = get_output(inst, idx);
@@ -492,12 +527,16 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 				}
 			}
 			break;
-		case Id_Memory:
-			import_memory(module, net_map, inst);
+                case Id_Assert:
+                case Id_Assume:
+                case Id_Cover:
+		case Id_Assert_Cover:
+			//  No output
 			break;
-		case Id_Mem_Rd:
+		case Id_Memory:
+		case Id_Memory_Init:
 		case Id_Mem_Wr_Sync:
-			//  Handle by import_memory.
+			//  Handled by import_memory.
 			break;
 		case Id_Signal:
 		case Id_Isignal:
@@ -713,23 +752,13 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			add_formal_input(module, net_map, inst, "$anyseq");
 			break;
 		case Id_Memory:
+		case Id_Memory_Init:
+			//  Will be handled later.
+			memories.push_back(inst);
 		        break;
 		case Id_Mem_Rd:
-		        {
-				RTLIL::Cell *cell = reinterpret_cast<RTLIL::Cell*>(get_wire(net_map, get_output(inst, 0)));
-				cell->setPort("\\ADDR", IN(1));
-			}
-		        break;
 		case Id_Mem_Wr_Sync:
-		        {
-				RTLIL::Cell *cell = reinterpret_cast<RTLIL::Cell*>(get_wire(net_map, get_output(inst, 0)));
-				SigSpec data = IN(4);
-				cell->setPort("\\ADDR", IN(1));
-				cell->setPort("\\CLK", IN(2));
-				cell->setPort("\\EN", SigSpec(SigBit(IN(3)), data.size()));
-				cell->setPort("\\DATA", data);
-			}
-                        break;
+			break;
 		case Id_Const_UB32:
 		case Id_Const_SB32:
 		case Id_Const_UL32:
@@ -756,6 +785,10 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 				      to_str(get_module_name(get_module(inst))).c_str());
 			return;
 		}
+	}
+
+	for (auto i : memories) {
+		import_memory(module, net_map, i);
 	}
 
 	//  Connect output drivers to output
