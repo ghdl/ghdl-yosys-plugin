@@ -453,8 +453,9 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Mux2:
 		case Id_Mux4:
 		case Id_Dff:
-		case Id_Adff:
 		case Id_Idff:
+		case Id_Adff:
+		case Id_Iadff:
 		case Id_Eq:
                 case Id_Ne:
                 case Id_Ult:
@@ -645,7 +646,13 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			}
 			break;
 		case Id_Adff:
+		case Id_Iadff:
 			module->addAdff(to_str(iname), IN(0), IN(2), IN(1), OUT(0), IN(3).as_const());
+			//  For iadff, the initial value is set on the output
+			//  wire.
+			if (id == Id_Iadff) {
+				net_map[get_output(inst, 0).id]->attributes["\\init"] = IN(2).as_const();
+			}
 			break;
 		case Id_Mux4:
 			{
