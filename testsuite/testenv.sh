@@ -1,8 +1,8 @@
 # Testsuite environment
 
-set -e
+. $topdir/../utils.sh
 
-. ../../utils.sh
+set -e
 
 if [ x"$GHDL" = x ]; then
     GHDL=ghdl

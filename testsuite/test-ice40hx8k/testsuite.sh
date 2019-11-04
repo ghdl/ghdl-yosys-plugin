@@ -1,6 +1,7 @@
 #!/bin/sh
 
-. ../testenv.sh
+topdir=..
+. $topdir/testenv.sh
 
 src=../../ice40hx8k
 

@@ -4,12 +4,11 @@ cd "$(dirname $0)"
 . ../utils.sh
 
 run_suite () {
-  . ../testenv.sh
   for d in */; do
       if [ -f $d/testsuite.sh ]; then
           printf "${ANSI_DARKCYAN}test $d ${ANSI_NOCOLOR}\n"
           cd $d
-          if . ./testsuite.sh; then
+          if ./testsuite.sh; then
               printf "${ANSI_GREEN}OK${ANSI_NOCOLOR}\n"
           else
               printf "${ANSI_RED}FAILED!${ANSI_NOCOLOR}\n"

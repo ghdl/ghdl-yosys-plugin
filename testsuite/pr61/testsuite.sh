@@ -1,6 +1,7 @@
 #!/bin/sh
 
-. ../testenv.sh
+topdir=..
+. $topdir/testenv.sh
 
 run_yosys -p "ghdl vector.vhdl -e vector; dump -o vector.il"
 
