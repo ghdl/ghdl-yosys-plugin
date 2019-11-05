@@ -45,11 +45,23 @@ analyze ()
     cmd "$GHDL" -a $GHDL_STD_FLAGS $GHDL_FLAGS $@
 }
 
-synth ()
+synth_import ()
 {
     travis_start "synth" "Synthesize $@"
-    run_yosys -p "ghdl $@; synth_ice40 -blif out.blif"
+    run_yosys -p "ghdl $*"
     travis_finish "synth"
+}
+
+synth_ice40 ()
+{
+    travis_start "synth" "Synthesize $@"
+    run_yosys -p "ghdl $*; synth_ice40 -blif out.blif"
+    travis_finish "synth"
+}
+
+synth ()
+{
+    synth_ice40 "$*"
 }
 
 formal ()
