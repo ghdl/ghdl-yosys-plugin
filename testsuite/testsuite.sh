@@ -18,7 +18,6 @@ run_suite () {
       else
           printf "${ANSI_YELLOW}Skip $d (no testsuite.sh)${ANSI_NOCOLOR}\n"
       fi
-      clean
   done
 }
 
