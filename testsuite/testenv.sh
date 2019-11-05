@@ -49,7 +49,9 @@ synth_import ()
 {
     travis_start "synth" "Synthesize $*"
     run_yosys -p "ghdl $*"
+    status=$?
     travis_finish "synth"
+    return $status
 }
 
 synth_ice40 ()
