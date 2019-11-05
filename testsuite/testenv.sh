@@ -1,6 +1,12 @@
 # Testsuite environment
 
+if [ x"$topdir" = x"" ]; then
+  echo "topdir must be defined"
+  exit 1
+fi
+
 . $topdir/../utils.sh
+abs_topdir=`pwd`/$topdir
 
 set -e
 
@@ -9,7 +15,8 @@ if [ x"$GHDL" = x ]; then
 fi
 
 if [ x"$YOSYS" = x ]; then
-    YOSYS="yosys -m ../../ghdl.so"
+    # Need to use abs_topdir because with sby yosys is executed in a subdir.
+    YOSYS="yosys -m $abs_topdir/../ghdl.so"
 fi
 
 if [ x"$SYMBIYOSYS" = x ]; then
