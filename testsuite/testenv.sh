@@ -48,7 +48,7 @@ analyze ()
 synth_import ()
 {
     travis_start "synth" "Synthesize $*"
-    run_yosys -p "ghdl $*"
+    run_yosys -q -p "ghdl $*"
     status=$?
     travis_finish "synth"
     return $status
@@ -57,7 +57,7 @@ synth_import ()
 synth_ice40 ()
 {
     travis_start "synth" "Synthesize $*"
-    run_yosys -p "ghdl $*; synth_ice40 -blif out.blif"
+    run_yosys -q -p "ghdl $*; synth_ice40 -blif out.blif"
     travis_finish "synth"
 }
 

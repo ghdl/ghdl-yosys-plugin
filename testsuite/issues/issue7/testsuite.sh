@@ -6,7 +6,7 @@ topdir=../..
 run_yosys -Q -q -p "ghdl ref.vhdl -e vector ref; write_verilog ref.v"
 run_yosys -Q -q -p "ghdl ref.vhdl vector.vhdl -e vector synth; write_verilog vector.v"
 
-run_yosys -Q -p '
+run_yosys -q -p '
  read_verilog ref.v
  rename vector ref
 

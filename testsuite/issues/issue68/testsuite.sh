@@ -3,6 +3,6 @@
 topdir=../..
 . $topdir/testenv.sh
 
-synth "demux.vhdl -e"
+synth_ice40 "demux.vhdl -e"
 
 clean
