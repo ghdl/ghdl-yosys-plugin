@@ -6,3 +6,4 @@ topdir=../..
 synth_ice40 "demux.vhdl -e"
 
 clean
+echo OK
