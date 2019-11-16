@@ -8,8 +8,12 @@ entity vector is
 end vector;
 
 architecture synth of vector is
+  signal v1 : signed (63 downto 0);
+  signal u1 : unsigned (63 downto 0);
 
 begin
-  v <= signed'(x"0ffffffffffffff0")+(-1);
-  u <= unsigned'(x"00ffffffffffff00")+4294967290;
+  v1 <= x"0ffffffffffffff0";
+  v <= v1+(-1);
+  u1 <= x"00ffffffffffff00";
+  u <= u1 +4294967290;
 end synth;
