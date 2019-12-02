@@ -851,12 +851,13 @@ struct GhdlPass : public Pass {
 #ifdef YOSYS_ENABLE_GHDL
 	virtual void execute(std::vector<std::string> args, RTLIL::Design *design)
 	{
-		static bool initialized;
+		static bool lib_initialized;
+		static unsigned work_initialized;
 		log_header(design, "Executing GHDL.\n");
 
 		//  Initialize the library.
-		if (!initialized) {
-			initialized = 1;
+		if (!lib_initialized) {
+			lib_initialized = 1;
 			libghdl_init ();
 			ghdlsynth__init_for_ghdl_synth();
 		}
@@ -871,7 +872,9 @@ struct GhdlPass : public Pass {
 				cmd_argv[i] = args[i + 1].c_str();
 
 			GhdlSynth::Module top;
-			top = ghdl_synth(cmd_argc, cmd_argv);
+			top = ghdl_synth
+			  (!work_initialized, cmd_argc, cmd_argv);
+			work_initialized++;
 			if (!is_valid(top)) {
 				log_cmd_error("vhdl import failed.\n");
 			}
