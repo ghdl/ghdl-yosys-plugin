@@ -694,7 +694,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			//  For iadff, the initial value is set on the output
 			//  wire.
 			if (id == Id_Iadff) {
-				net_map[get_output(inst, 0).id]->attributes["\\init"] = IN(2).as_const();
+				net_map[get_output(inst, 0).id]->attributes["\\init"] = IN(4).as_const();
 			}
 			break;
 		case Id_Mux4:
