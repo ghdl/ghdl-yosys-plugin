@@ -462,13 +462,13 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		set_src(net_map, output_out, wire);
 
 		if (0) {
-		//  If the driver for this output drives only this output,
-		//  reuse this wire.
-		Instance output_inst = get_net_parent(output_out);
-		log_assert(get_id(get_module(output_inst)) == Id_Output);
-		Net output_drv = get_input_net(output_inst, 0);
-		if (has_one_connection (output_drv))
-			set_src(net_map, output_drv, wire);
+			//  If the driver for this output drives only
+			//  this output, reuse this wire.
+			Instance output_inst = get_net_parent(output_out);
+			log_assert(get_id(get_module(output_inst)) == Id_Output);
+			Net output_drv = get_input_net(output_inst, 0);
+			if (has_one_connection (output_drv))
+				set_src(net_map, output_drv, wire);
 		}
 	}
 
@@ -731,7 +731,8 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 				Net sig = get_input_net(inst, 0);
                                 if (is_set(net_map, sig)) {
                                     Wire *w = net_map.at(sig.id);
-                                    if (w)
+				    /* Do not rename ports.  */
+                                    if (w && !w->port_input && !w->port_output)
                                         module->rename(w, to_str(iname));
                                 }
 			}
