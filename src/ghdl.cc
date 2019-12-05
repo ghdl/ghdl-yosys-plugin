@@ -278,6 +278,7 @@ static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net
 		Net dat;
 		switch(get_id(port_inst)) {
 		case Id_Mem_Rd:
+                case Id_Mem_Rd_Sync:
 			dat = get_output(port_inst, 1);
 			addr = get_input_net(port_inst, 1);
 			nbr_rd++;
@@ -351,6 +352,13 @@ static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net
 			rd_addr.append(IN(1));
 			rd_data.append(OUT(1));
 			rd_en.append(Const(1, 1));
+			break;
+                case Id_Mem_Rd_Sync:
+                        rd_clk_en.push_back(RTLIL::State::S1);
+                        rd_clk.append(IN(2));
+			rd_addr.append(IN(1));
+			rd_data.append(OUT(1));
+			rd_en.append(IN(3));
 			break;
 		case Id_Mem_Wr_Sync:
 			wr_clk.append(IN(2));
@@ -497,6 +505,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Anyconst:
 		case Id_Anyseq:
 		case Id_Mem_Rd:
+                case Id_Mem_Rd_Sync:
                 case Id_User_None:
 			for (Port_Idx idx = 0; idx < get_nbr_outputs(im); idx++) {
 				Net o = get_output(inst, idx);
@@ -748,6 +757,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			memories.push_back(inst);
 		        break;
 		case Id_Mem_Rd:
+                case Id_Mem_Rd_Sync:
 		case Id_Mem_Wr_Sync:
 			break;
 		case Id_Const_UB32:
