@@ -79,6 +79,7 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 	case Id_Signal:
 	case Id_Isignal:
 	case Id_Port:
+        case Id_Output:
 		return IN(0);
 	case Id_Uextend:
 		{
@@ -449,28 +450,6 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		wire->width = get_width(port);
 		set_src(net_map, port, wire);
 	}
-	//  Create output ports
-	Port_Idx nbr_outputs = get_nbr_outputs(m);
-	for (Port_Idx idx = 0; idx < nbr_outputs; idx++) {
-		Net output_out = get_input_net(self_inst, idx);
-
-		//  Create wire
-		RTLIL::Wire *wire = module->addWire(to_str(get_output_name(m, idx)));
-		wire->port_id = nbr_inputs + idx + 1;
-		wire->port_output = true;
-		wire->width = get_width(output_out);
-		set_src(net_map, output_out, wire);
-
-		if (0) {
-			//  If the driver for this output drives only
-			//  this output, reuse this wire.
-			Instance output_inst = get_net_parent(output_out);
-			log_assert(get_id(get_module(output_inst)) == Id_Output);
-			Net output_drv = get_input_net(output_inst, 0);
-			if (has_one_connection (output_drv))
-				set_src(net_map, output_drv, wire);
-		}
-	}
 
 	//  Create wires for outputs of (real) cells.
 	for (Instance inst = get_first_instance(m);
@@ -803,14 +782,17 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		import_memory(module, net_map, i);
 	}
 
-	//  Connect output drivers to output
+	//  Create output ports
+	Port_Idx nbr_outputs = get_nbr_outputs(m);
 	for (Port_Idx idx = 0; idx < nbr_outputs; idx++) {
 		Net output_out = get_input_net(self_inst, idx);
-		Instance output_inst = get_net_parent(output_out);
-		log_assert(get_id(get_module(output_inst)) == Id_Output);
-		Net output_drv = get_input_net(output_inst, 0);
-		if (!has_one_connection (output_drv))
-			module->connect(get_src(net_map, output_out), get_src(net_map, output_drv));
+
+		//  Create wire
+		RTLIL::Wire *wire = module->addWire(to_str(get_output_name(m, idx)));
+		wire->port_id = nbr_inputs + idx + 1;
+		wire->port_output = true;
+		wire->width = get_width(output_out);
+                module->connect(wire, get_src(net_map, output_out));
 	}
 
 	module->fixup_ports();
