@@ -140,6 +140,10 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 		{
 		       return SigSpec(RTLIL::State::Sx, get_width(n));
 		}
+	case Id_Const_0:
+		{
+		       return SigSpec(RTLIL::State::S0, get_width(n));
+		}
 	case Id_Const_Log: // arbitrary lenght 01ZX
 	        {
 		       const unsigned wd = get_width(n);
@@ -499,7 +503,10 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
                 case Id_Asr:
 		case Id_Smul:
 		case Id_Umul:
-		case Id_Smod:
+		case Id_Sdiv:
+		case Id_Udiv:
+		case Id_Srem:
+		case Id_Umod:
 		case Id_Allconst:
 		case Id_Allseq:
 		case Id_Anyconst:
@@ -539,6 +546,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Const_Log:
 		case Id_Const_Z:
 		case Id_Const_X:
+		case Id_Const_0:
 		case Id_Uextend:
 		case Id_Sextend:
 		case Id_Utrunc:
@@ -661,8 +669,19 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Umul:
 			module->addMul(to_str(iname), IN(0), IN(1), OUT(0), false);
 			break;
-		case Id_Smod:
+		case Id_Sdiv:
+			module->addDiv(to_str(iname), IN(0), IN(1), OUT(0), true);
+			break;
+		case Id_Udiv:
+			module->addDiv(to_str(iname), IN(0), IN(1), OUT(0), false);
+			break;
+		case Id_Srem:
+            // Yosys modulus usese Verilogs *remainder* behavior
+            // there is no signed modulus operator in Yosys
 			module->addMod(to_str(iname), IN(0), IN(1), OUT(0), true);
+			break;
+		case Id_Umod:
+			module->addMod(to_str(iname), IN(0), IN(1), OUT(0), false);
 			break;
 		case Id_Mux2:
 			module->addMux(to_str(iname), IN(1), IN(2), IN(0), OUT(0));
@@ -767,6 +786,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Const_Log:
 		case Id_Const_Z:
 		case Id_Const_X:
+		case Id_Const_0:
 		case Id_Uextend:
 		case Id_Sextend:
 		case Id_Utrunc:
