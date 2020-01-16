@@ -47,18 +47,18 @@ analyze ()
 
 synth_import ()
 {
-    travis_start "synth" "Synthesize $*"
+    gstart "Synthesize $*"
     run_yosys -q -p "ghdl $*"
     status=$?
-    travis_finish "synth"
+    gend
     return $status
 }
 
 synth_ice40 ()
 {
-    travis_start "synth" "Synthesize $*"
+    gstart "synth" "Synthesize $*"
     run_yosys -q -p "ghdl $*; synth_ice40 -blif out.blif"
-    travis_finish "synth"
+    gend
 }
 
 synth ()
@@ -68,9 +68,9 @@ synth ()
 
 formal ()
 {
-    travis_start "formal" "Verify $@"
+    gstart "Verify $@"
     run_symbiyosys -f -d work $@.sby
-    travis_finish "formal"
+    gend
 }
 
 clean ()
