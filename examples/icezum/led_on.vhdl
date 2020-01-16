@@ -8,13 +8,8 @@ end led_on;
 
 architecture test of led_on is
 begin
-
   -- Turn on the Led0
   led0 <= '1';
-
   -- Turn off the other leds
   (led1, led2, led3, led4, led5, led6, led7) <= std_logic_vector'("0000000");
-
 end test;
-
-
