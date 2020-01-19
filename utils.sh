@@ -19,54 +19,34 @@ enable_color
 #--
 
 print_start() {
-  COL="$ANSI_BLUE"
-  if [ "x$3" != "x" ]; then
-    COL="$3"
+  if [ "x$2" != "x" ]; then
+    COL="$2"
+  elif [ "x$BASE_COL" != "x" ]; then
+    COL="$BASE_COL"
+  else
+    COL="$ANSI_MAGENTA"
   fi
-  printf "$COL> $2$ANSI_NOCOLOR\n"
+  printf "${COL}${1}$ANSI_NOCOLOR\n"
 }
 
-travis_start () {
+gstart () {
   print_start "$@"
 }
-travis_finish () {
+gend () {
   :
 }
 
-[ -n "$TRAVIS" ] && {
-  # This is a trimmed down copy of
-  # https://github.com/travis-ci/travis-build/blob/master/lib/travis/build/templates/header.sh
-  travis_time_start() {
-    # `date +%N` returns the date in nanoseconds. It is used as a replacement for $RANDOM, which is only available in bash.
-    travis_timer_id=`date +%N`
-    travis_start_time=$(travis_nanoseconds)
-    echo "travis_time:start:$travis_timer_id"
-  }
-  travis_time_finish() {
-    travis_end_time=$(travis_nanoseconds)
-    local duration=$(($travis_end_time-$travis_start_time))
-    echo "travis_time:end:$travis_timer_id:start=$travis_start_time,finish=$travis_end_time,duration=$duration"
-  }
+if [ -n "$GITHUB_EVENT_PATH" ]; then
+  export CI=true
+fi
 
-  if [ "$TRAVIS_OS_NAME" = "osx" ]; then
-    travis_nanoseconds() {
-      date -u '+%s000000000'
-    }
-  else
-    travis_nanoseconds() {
-      date -u '+%s%N'
-    }
-  fi
-
-  travis_start () {
-    echo "travis_fold:start:$1"
-    travis_time_start
+[ -n "$CI" ] && {
+  gstart () {
+    printf '::group::'
     print_start "$@"
   }
 
-  travis_finish () {
-    travis_time_finish
-    echo "travis_fold:end:$1"
+  gend () {
+    echo '::endgroup::'
   }
-
-} || echo "INFO: not in Travis CI"
+} || echo "INFO: not in CI"

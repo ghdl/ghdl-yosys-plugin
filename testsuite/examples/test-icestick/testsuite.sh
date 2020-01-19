@@ -3,7 +3,7 @@
 topdir=../..
 . $topdir/testenv.sh
 
-src=../../../icestick
+src=../../../examples/icestick
 
 # spin2
 

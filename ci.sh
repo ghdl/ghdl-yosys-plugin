@@ -5,10 +5,8 @@ set -e
 cd "$(dirname $0)"
 . ./utils.sh
 
-prefix='/opt/ghdl'
-
 #--
-travis_start "ghdl" "[Build] ghdl/synth:latest" "$ANSI_MAGENTA"
+gstart "[Build] ghdl/synth:latest" "$ANSI_MAGENTA"
 
 case "$TRAVIS_COMMIT_MESSAGE" in
   "*[stable]*")
@@ -22,8 +20,8 @@ case "$TRAVIS_COMMIT_MESSAGE" in
 esac
 echo "GHDL_URL: $GHDL_URL"
 
-docker build -t ghdl/synth:latest - <<-EOF
-FROM ghdl/build:buster-mcode AS build
+docker build -t tmp - <<-EOF
+FROM ghdl/build:buster-mcode
 
 RUN apt-get update -qq \
  && DEBIAN_FRONTEND=noninteractive apt-get -y install --no-install-recommends \
@@ -35,60 +33,58 @@ RUN apt-get update -qq \
 
 RUN mkdir -p ghdl && cd ghdl \
  && curl -fsSL "$GHDL_URL" | tar xzf - --strip-components=1 \
- && ./configure --prefix="$prefix" --enable-libghdl --enable-synth \
+ && ./configure --enable-libghdl --enable-synth \
  && make all \
- && make install
-
-FROM ghdl/run:buster-mcode
-COPY --from=build $prefix $prefix
-ENV PATH $prefix/bin:\$PATH
+ && make DESTDIR=/opt/ghdl install
 EOF
 
-travis_finish "ghdl"
+docker build -t ghdl/synth:latest - <<-EOF
+FROM ghdl/run:buster-mcode
+COPY --from=tmp /opt/ghdl /
+EOF
+
+gend
 #--
-travis_start "ghdlsynth" "[Build] ghdl/synth:beta" "$ANSI_MAGENTA"
+gstart "[Build] ghdl/synth:beta" "$ANSI_MAGENTA"
 
 docker build -t ghdl/synth:beta . -f- <<-EOF
-FROM ghdl/synth:yosys-gnat AS build
-COPY --from=ghdl/synth:latest $prefix $prefix
+FROM ghdl/cache:yosys-gnat AS build
+COPY --from=tmp /opt/ghdl /opt/ghdl
 COPY . /ghdlsynth
 
-RUN cd /ghdlsynth \
- && export PATH=\$PATH:$prefix/bin \
+RUN cp -vr /opt/ghdl/* / \
+ && cd /ghdlsynth \
  && make \
- && cp ghdl.so $prefix/lib/ghdl_yosys.so
+ && cp ghdl.so /opt/ghdl/usr/local/lib/ghdl_yosys.so
 
-FROM ghdl/synth:yosys-gnat
-COPY --from=build $prefix $prefix
-ENV PATH $prefix/bin:\$PATH
+FROM ghdl/cache:yosys-gnat
+COPY --from=build /opt/ghdl /
 RUN yosys-config --exec mkdir -p --datdir/plugins \
- && yosys-config --exec ln -s $prefix/lib/ghdl_yosys.so --datdir/plugins/ghdl.so
+ && yosys-config --exec ln -s /usr/local/lib/ghdl_yosys.so --datdir/plugins/ghdl.so
 EOF
 
-travis_finish "ghdlsynth"
+gend
 #---
-travis_start "formal" "[Build] ghdl/synth:formal" "$ANSI_MAGENTA"
+gstart "[Build] ghdl/synth:formal" "$ANSI_MAGENTA"
 
 docker build -t ghdl/synth:formal . -f- <<-EOF
 FROM ghdl/synth:beta
 
-COPY --from=ghdl/cache:formal ./z3 /opt/z3
-COPY --from=ghdl/cache:formal ./symbiyosys /usr/local
+COPY --from=ghdl/cache:formal ./z3 /
+COPY --from=ghdl/cache:formal ./symbiyosys /
 
 RUN apt-get update -qq \
  && DEBIAN_FRONTEND=noninteractive apt-get -y install --no-install-recommends \
     python3 \
  && apt-get autoclean && apt-get clean && apt-get -y autoremove \
  && rm -rf /var/lib/apt/lists/*
-
-ENV PATH=/opt/z3/bin:\$PATH
 EOF
 
-travis_finish "formal"
+gend "formal"
 #---
 printf "${ANSI_MAGENTA}[Test] testsuite ${ANSI_NOCOLOR}\n"
 
-docker run --rm -t -e TRAVIS=$TRAVIS -v /$(pwd)://src -w //src -e YOSYS='yosys -m ghdl' ghdl/synth:formal bash -c "$(cat <<EOF
+docker run --rm -t -e CI -v /$(pwd)://src -w //src -e YOSYS='yosys -m ghdl' ghdl/synth:formal bash -c "$(cat <<EOF
 ./testsuite/testsuite.sh
 EOF
 )"

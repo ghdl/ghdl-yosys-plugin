@@ -1,5 +1,0 @@
-os: linux
-services: docker
-language: minimal
-install: skip
-script: ./travis.sh
