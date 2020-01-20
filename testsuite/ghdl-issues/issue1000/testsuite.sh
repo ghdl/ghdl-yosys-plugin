@@ -6,3 +6,4 @@ topdir=../..
 synth_import --std=08 test.vhdl -e
 
 clean
+echo OK

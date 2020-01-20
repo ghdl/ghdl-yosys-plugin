@@ -8,3 +8,4 @@ for f in no_vector counter8 vector; do
 done
 
 clean
+echo OK

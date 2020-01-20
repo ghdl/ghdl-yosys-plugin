@@ -8,3 +8,4 @@ for f in lsl lsr asr; do
 done
 
 clean
+echo OK

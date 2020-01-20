@@ -8,3 +8,4 @@ for f in or xor nor nand xnor; do
 done
 
 clean
+echo OK

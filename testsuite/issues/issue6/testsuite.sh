@@ -6,3 +6,4 @@ topdir=../..
 synth 'vector.vhdl -e vector'
 
 clean
+echo OK

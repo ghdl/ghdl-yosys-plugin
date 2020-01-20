@@ -19,3 +19,4 @@ run_yosys -q -p '
 
 clean
 rm -f *.v
+echo OK
