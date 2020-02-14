@@ -1,0 +1,4 @@
+This directory should leave - in future.
+
+It contains hand woven Verilog wrappers for non resolving entities or
+primitives with generics.
