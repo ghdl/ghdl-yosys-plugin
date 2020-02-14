@@ -1,0 +1,122 @@
+FREQUENCY NET "clk_in" 100.000000 MHz ;
+IOBUF PORT "clk_in" IO_TYPE=LVDS DIFFRESISTOR=100 ;
+# FREQUENCY NET "clk_serdes_c" 156.250000 MHz ;
+IOBUF PORT "clk_serdes" IO_TYPE=LVDS DIFFRESISTOR=100 ;
+# On board oscillator:
+LOCATE COMP "clk_in" SITE "P3" ;
+LOCATE COMP "dip_sw[7]" SITE "K20" ;
+LOCATE COMP "dip_sw[6]" SITE "J19" ;
+LOCATE COMP "dip_sw[5]" SITE "K18" ;
+LOCATE COMP "dip_sw[4]" SITE "J18" ;
+LOCATE COMP "dip_sw[3]" SITE "F2" ;
+LOCATE COMP "dip_sw[2]" SITE "G3" ;
+LOCATE COMP "dip_sw[1]" SITE "K3" ;
+LOCATE COMP "dip_sw[0]" SITE "H2" ;
+# LED bank
+LOCATE COMP "oled[0]" SITE "E16" ;
+LOCATE COMP "oled[1]" SITE "D17" ;
+LOCATE COMP "oled[2]" SITE "D18" ;
+LOCATE COMP "oled[3]" SITE "E18" ;
+LOCATE COMP "oled[4]" SITE "F17" ;
+LOCATE COMP "oled[5]" SITE "F18" ;
+LOCATE COMP "oled[6]" SITE "E17" ;
+LOCATE COMP "oled[7]" SITE "F16" ;
+IOBUF PORT "oled[0]" ;
+IOBUF PORT "oled[1]" ;
+IOBUF PORT "oled[2]" ;
+IOBUF PORT "oled[3]" ;
+IOBUF PORT "oled[4]" ;
+IOBUF PORT "oled[5]" ;
+IOBUF PORT "oled[6]" ;
+IOBUF PORT "oled[7]" ;
+##################################################################
+LOCATE COMP "rxd_uart" SITE "C11" ;
+LOCATE COMP "txd_uart" SITE "A11" ;
+# Internal SPI port:
+LOCATE COMP "spi_mosi" SITE "W2" ;
+LOCATE COMP "spi_miso" SITE "V2" ;
+LOCATE COMP "spi_cs" SITE "R2" ;
+# 14 segment LED I/O
+LOCATE COMP "seg[0]" SITE "M20" ;
+LOCATE COMP "seg[1]" SITE "L18" ;
+LOCATE COMP "seg[2]" SITE "M19" ;
+LOCATE COMP "seg[3]" SITE "L16" ;
+LOCATE COMP "seg[4]" SITE "L17" ;
+LOCATE COMP "seg[5]" SITE "M18" ;
+LOCATE COMP "seg[6]" SITE "N16" ;
+LOCATE COMP "seg[7]" SITE "M17" ;
+LOCATE COMP "seg[8]" SITE "N18" ;
+LOCATE COMP "seg[9]" SITE "P17" ;
+LOCATE COMP "seg[10]" SITE "N17" ;
+LOCATE COMP "seg[11]" SITE "P16" ;
+LOCATE COMP "seg[12]" SITE "R16" ;
+LOCATE COMP "seg[13]" SITE "R17" ;
+LOCATE COMP "segdp" SITE "U1" ;
+IOBUF PORT "segdp" PULLMODE=NONE OPENDRAIN=OFF CLAMP=ON DRIVE=8 ;
+IOBUF PORT "seg[13]"  ;
+IOBUF PORT "seg[12]"  ;
+IOBUF PORT "seg[11]"  ;
+IOBUF PORT "seg[10]"  ;
+IOBUF PORT "seg[9]"   ;
+IOBUF PORT "seg[8]"   ;
+IOBUF PORT "seg[7]"   ;
+IOBUF PORT "seg[6]"   ;
+IOBUF PORT "seg[5]"   ;
+IOBUF PORT "seg[4]"   ;
+IOBUF PORT "seg[3]"   ;
+IOBUF PORT "seg[2]"   ;
+IOBUF PORT "seg[1]"   ;
+IOBUF PORT "seg[0]"   ;
+############################################################################
+# Ethernet
+#
+# Not connected:
+# LOCATE COMP "phy_clk125" SITE "L19" ;
+# LOCATE COMP "phy_rgmii_rxclk" SITE "L20" ;
+LOCATE COMP "phy_rgmii_rxctl" SITE "U19" ;
+LOCATE COMP "phy_rgmii_rxd[3]" SITE "R18" ;
+LOCATE COMP "phy_rgmii_rxd[2]" SITE "T19" ;
+LOCATE COMP "phy_rgmii_rxd[1]" SITE "U20" ;
+LOCATE COMP "phy_rgmii_rxd[0]" SITE "T20" ;
+LOCATE COMP "eth_rst_n" SITE "U17" ;
+LOCATE COMP "phy_rgmii_txclk" SITE "P19" ;
+LOCATE COMP "phy_rgmii_txctl" SITE "R20" ;
+LOCATE COMP "phy_rgmii_txd[3]" SITE "P20" ;
+LOCATE COMP "phy_rgmii_txd[2]" SITE "P18" ;
+LOCATE COMP "phy_rgmii_txd[1]" SITE "N20" ;
+LOCATE COMP "phy_rgmii_txd[0]" SITE "N19" ;
+LOCATE COMP "ts_mac_coremdc" SITE "T18" ;
+LOCATE COMP "ts_mac_coremdio" SITE "U18" ;
+LOCATE COMP "hw_config" SITE "T17" ;
+############################################################################
+# BLOCK JTAGPATHS ;
+# SYSCONFIG SLAVE_SPI_PORT=DISABLE CONFIG_MODE=JTAG CONFIG_SECURE=OFF TRANSFR=OFF MASTER_SPI_PORT=DISABLE SLAVE_PARALLEL_PORT=DISABLE MCCLK_FREQ=38.8 BACKGROUND_RECONFIG=OFF ;
+IOBUF PORT "spi_miso" IO_TYPE=LVCMOS25 ;
+IOBUF PORT "rxd_uart" IO_TYPE=LVCMOS33 ;
+IOBUF PORT "txd_uart" IO_TYPE=LVCMOS33 ;
+# BLOCK NET "soc/perio/rx_reset" ;
+# BLOCK NET "soc/perio/tx_reset" ;
+DEFINE PORT GROUP "rgmii_in" "phy_rgmii_rxctl" 
+"phy_rgmii_rxd[3]" 
+"phy_rgmii_rxd[2]" 
+"phy_rgmii_rxd[1]" 
+"phy_rgmii_rxd[0]" ;
+# FREQUENCY PORT "phy_rgmii_rxclk" 125.000000 MHz ;
+# INPUT_SETUP GROUP "rgmii_in"5.000000 ns CLKPORT "phy_rgmii_rxclk" ;
+LOCATE COMP "clk_serdes" SITE "A4" ;
+
+# JTAG pins:
+# LOCATE COMP "tck" SITE "T5" ;
+# LOCATE COMP "tdi" SITE "R5" ;
+# LOCATE COMP "tms" SITE "U5" ;
+# LOCATE COMP "tdo" SITE "V4" ;
+
+LOCATE COMP "reset_n" SITE "T1" ;
+# IOBUF PORT "reset_n" ;
+
+IOBUF PORT "tck" IO_TYPE=LVCMOS33 ;
+IOBUF PORT "tdi" IO_TYPE=LVCMOS33 ;
+IOBUF PORT "tms" IO_TYPE=LVCMOS33 ;
+
+# User code for rv32 TAP:
+USERCODE HEX "CAFE1050" ; 
