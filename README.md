@@ -73,19 +73,21 @@ GHDL_DIR := <ghdl install dir>
 
 ## Usage
 
-Example for icestick, using ghdl, yosys, arachne-pnr and icestorm:
+Example for icestick, using ghdl, yosys, nextpnr and icestorm:
 
 ```sh
+cd examples/icestick/
+
 # Analyse VHDL sources
 ghdl -a leds.vhdl
 ghdl -a spin1.vhdl
 
 # Synthesize the design.
 # NOTE: if ghdl is built as a module, set MODULE to '-m ghdl' or '-m path/to/ghdl.so'
-yosys $MODULE -p 'ghdl leds; synth_ice40 -blif leds.blif'
+yosys $MODULE -p 'ghdl leds; synth_ice40 --json leds.json'
 
 # P&R
-arachne-pnr -d 1k -o leds.asc -p leds.pcf leds.blif
+nextpnr-ice40 --package hx1k --pcf leds.pcf --asc leds.asc --json leds.json
 
 # Generate bitstream
 icepack leds.asc leds.bin
@@ -94,7 +96,7 @@ icepack leds.asc leds.bin
 iceprog leds.bin
 ```
 
-Alternatively, it is possible to analyze, elaborate and synthesize VHDL sources at once, instead of calling ghdl and yosys in two steps. In this example: `yosys $MODULE -p 'ghdl leds.vhdl spin1.vhdl -e leds; synth_ice40 -blif leds.blif`.
+Alternatively, it is possible to analyze, elaborate and synthesize VHDL sources at once, instead of calling ghdl and yosys in two steps. In this example: `yosys $MODULE -p 'ghdl leds.vhdl spin1.vhdl -e leds; synth_ice40 --json leds.json`.
 
 ## Docker
 
