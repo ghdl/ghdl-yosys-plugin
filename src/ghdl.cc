@@ -276,7 +276,7 @@ static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net
 	unsigned nbr_wr = 0;
 	unsigned width = 0;
 	unsigned abits = 0;
-	for (Input port = first_port; port.id != 0;) {
+	for (Input port = first_port; ;) {
 		Instance port_inst = get_input_parent(port);
 		Net addr;
 		Net dat;
@@ -292,9 +292,15 @@ static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net
 			addr = get_input_net(port_inst, 1);
 			nbr_wr++;
 			break;
+		case Id_Memory:
+		case Id_Memory_Init:
+		        port.id = 0;
+			break;
 		default:
 			log_assert(0);
 		}
+		if (port.id == 0)
+			break;
 
 		if (width == 0) {
 			width = get_width(dat);
@@ -304,7 +310,7 @@ static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net
 			log_assert(width == get_width(dat));
 			log_assert(abits == get_width(addr));
 		}
-		port = get_first_sink(get_output(port_inst, 0));
+		port = get_first_sink(get_output(port_inst,  0));
 	}
 
 	unsigned size = get_width(mem_o) / width;
@@ -326,7 +332,7 @@ static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net
 		init_data = Const(State::Sx, size * width);
 		break;
 	case Id_Memory_Init:
-		init_data = get_src(net_map, get_input_net(inst, 0)).as_const();
+		init_data = get_src(net_map, get_input_net(inst, 1)).as_const();
 		break;
 	default:
 		log_assert(0);
@@ -345,7 +351,7 @@ static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net
 	SigSpec wr_addr;
 	SigSpec wr_data;
 	SigSpec wr_en;
-	for (Input port = first_port; port.id != 0; ) {
+	for (Input port = first_port; ; ) {
 		Instance port_inst = get_input_parent(port);
 #define IN(N) get_src(net_map, get_input_net(port_inst, (N)))
 #define OUT(N) get_src(net_map, get_output(port_inst, (N)))
@@ -370,9 +376,15 @@ static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net
 			wr_data.append(IN(4));
 			wr_en.append(SigSpec(SigBit(IN(3)), width));
 			break;
+		case Id_Memory:
+		case Id_Memory_Init:
+			port.id = 0;
+			break;
 		default:
 			log_assert(0);
 		}
+		if (port.id == 0)
+			break;
 		port = get_first_sink(get_output(port_inst, 0));
 	}
 #undef IN
