@@ -868,10 +868,31 @@ struct GhdlPass : public Pass {
 		log("\n");
 #endif
 		log("\n");
-		log("    ghdl [FILES... -e] UNIT\n");
+		log("    ghdl [options] unit [arch]\n");
 		log("\n");
-		log("Elaborate the design and import to Yosys\n");
+		log("Elaborate the already analyzed unit design and import it\n");
 		log("\n");
+		log("    ghdl [options] files... -e [unit]\n");
+		log("\n");
+		log("Analyse files, elaborate unit and import it\n");
+		log("If unit is not specified, it is automatically found\n");
+		log("\n");
+		log("Full list of options are described in ghdl documentation.\n");
+		log("\n");
+		log("    --std=(93|08)\n");
+		log("        set the vhdl standard.\n");
+		log("\n");
+		log("    -C\n");
+		log("        allow UTF-8 in comments.\n");
+		log("\n");
+		log("    --ieee=synopsys\n");
+		log("        allow use of ieee.std_logic_arith.\n");
+		log("\n");
+		log("    -fpsl\n");
+		log("        parse PSL in comments.\n");
+		log("\n");
+		log("    --top-name=hash\n");
+		log("        use hash to encode the top entity name\n");
 	}
 #ifdef YOSYS_ENABLE_GHDL
 	virtual void execute(std::vector<std::string> args, RTLIL::Design *design)
