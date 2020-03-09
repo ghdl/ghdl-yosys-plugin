@@ -64,14 +64,32 @@ static Wire *get_wire(std::vector<RTLIL::Wire *> &net_map, Net n)
 	return res;
 }
 
+static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n);
+
+static RTLIL::SigSpec get_src_concat(std::vector<RTLIL::Wire *> &net_map, Instance inst, unsigned nbr_in)
+{
+        RTLIL::SigSpec res;
+        //  ConcatN means { I0; I1; .. IN}, but append() adds
+        //  bits to the MSB side.
+        for (unsigned i = nbr_in; i > 0; i--)
+                res.append(get_src(net_map, get_input_net(inst, (i - 1))));
+        return res;
+}
+
+static RTLIL::SigSpec get_src_extract(std::vector<RTLIL::Wire *> &net_map, Net n, unsigned off, unsigned wd)
+{
+        RTLIL::SigSpec res = get_src(net_map, n);
+        return res.extract(off, wd);
+}
+
 static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 {
 	log_assert(n.id != 0);
 
 	//  Search if N is the output of a cell.
-	Wire *res = get_wire(net_map, n);
-	if (res != nullptr)
-		return res;
+	Wire *w = get_wire(net_map, n);
+	if (w != nullptr)
+		return w;
 
 	Instance inst = get_net_parent(n);
 	switch(get_id(inst)) {
@@ -201,32 +219,15 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 		       return RTLIL::SigSpec(RTLIL::Const(bits));
 		}
 	case Id_Extract:
-		{
-			RTLIL::SigSpec res = IN(0);
-			return res.extract(get_param_uns32(inst, 0), get_width(n));
-		}
+                return get_src_extract(net_map, get_input_net(inst, 0), get_param_uns32(inst, 0), get_width(n));
 	case Id_Concat2:
+                return get_src_concat(net_map, inst, 2);
 	case Id_Concat3:
+                return get_src_concat(net_map, inst, 3);
 	case Id_Concat4:
-	       {
-			RTLIL::SigSpec res;
-			unsigned nbr_in = get_nbr_inputs(get_module(inst));
-			//  ConcatN means { I0; I1; .. IN}, but append() adds
-			//  bits to the MSB side.
-			for (unsigned i = nbr_in; i > 0; i--)
-				res.append(IN(i - 1));
-			return res;
-	       }
+                return get_src_concat(net_map, inst, 4);
 	case Id_Concatn:
-	       {
-			RTLIL::SigSpec res;
-			unsigned nbr_in = get_param_uns32(inst, 0);
-			//  ConcatN means { I0; I1; .. IN}, but append() adds
-			//  bits to the MSB side.
-			for (unsigned i = nbr_in; i > 0; i--)
-				res.append(IN(i - 1));
-			return res;
-	       }
+                return get_src_concat(net_map, inst, get_param_uns32(inst, 0));
 	default:
 		log_cmd_error("wire not found for %s\n", to_str(get_module_name(get_module(inst))).c_str());
 		break;
