@@ -145,7 +145,7 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 	case Id_Signal:
 	case Id_Isignal:
 	case Id_Port:
-        case Id_Output:
+	case Id_Output:
 		return IN(0);
 	case Id_Uextend:
 		{
@@ -167,104 +167,104 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 		}
 	case Id_Const_Bit: // arbitrary width binary
 		{
-		       const unsigned wd = get_width(n);
-		       std::vector<RTLIL::State> bits(wd);
-		       unsigned int val = 0;
-		       for (unsigned i = 0; i < wd; i++) {
-			       if (i % 32 == 0)
-			               val = get_param_uns32(inst, i / 32);
-			       bits[i] = (val >> (i%32)) & 1 ? RTLIL::State::S1 : RTLIL::State::S0;
-		       }
-		       return RTLIL::SigSpec(RTLIL::Const(bits));
+			const unsigned wd = get_width(n);
+			std::vector<RTLIL::State> bits(wd);
+			unsigned int val = 0;
+			for (unsigned i = 0; i < wd; i++) {
+				if (i % 32 == 0)
+					val = get_param_uns32(inst, i / 32);
+				bits[i] = (val >> (i%32)) & 1 ? RTLIL::State::S1 : RTLIL::State::S0;
+			}
+			return RTLIL::SigSpec(RTLIL::Const(bits));
 		}
 	case Id_Const_UB32: // zero padded binary
 		{
-		       const unsigned wd = get_width(n);
-		       std::vector<RTLIL::State> bits(wd);
-		       unsigned int val = get_param_uns32(inst, 0);
-		       for (unsigned i = 0; i < wd && i < 32; i++) {
-			       bits[i] = (val >> i) & 1 ? RTLIL::State::S1 : RTLIL::State::S0;
-		       }
-		       return RTLIL::SigSpec(RTLIL::Const(bits));
+			const unsigned wd = get_width(n);
+			std::vector<RTLIL::State> bits(wd);
+			unsigned int val = get_param_uns32(inst, 0);
+			for (unsigned i = 0; i < wd && i < 32; i++) {
+				bits[i] = (val >> i) & 1 ? RTLIL::State::S1 : RTLIL::State::S0;
+			}
+			return RTLIL::SigSpec(RTLIL::Const(bits));
 		}
 	case Id_Const_SB32: // sign extended binary
 		{
-		       const unsigned wd = get_width(n);
-		       std::vector<RTLIL::State> bits(wd);
-		       unsigned int val = get_param_uns32(inst, 0);
-		       for (unsigned i = 0; i < wd; i++) {
-			       unsigned idx = i < 32 ? i : 31;
-			       bits[i] = (val >> idx) & 1 ? RTLIL::State::S1 : RTLIL::State::S0;
-		       }
-		       return RTLIL::SigSpec(RTLIL::Const(bits));
+			const unsigned wd = get_width(n);
+			std::vector<RTLIL::State> bits(wd);
+			unsigned int val = get_param_uns32(inst, 0);
+			for (unsigned i = 0; i < wd; i++) {
+				unsigned idx = i < 32 ? i : 31;
+				bits[i] = (val >> idx) & 1 ? RTLIL::State::S1 : RTLIL::State::S0;
+			}
+			return RTLIL::SigSpec(RTLIL::Const(bits));
 		}
 	case Id_Const_Z:
 		{
-		       return SigSpec(RTLIL::State::Sz, get_width(n));
+			return SigSpec(RTLIL::State::Sz, get_width(n));
 		}
 	case Id_Const_X:
 		{
-		       return SigSpec(RTLIL::State::Sx, get_width(n));
+			return SigSpec(RTLIL::State::Sx, get_width(n));
 		}
 	case Id_Const_0:
 		{
-		       return SigSpec(RTLIL::State::S0, get_width(n));
+			return SigSpec(RTLIL::State::S0, get_width(n));
 		}
 	case Id_Const_Log: // arbitrary lenght 01ZX
-	        {
-		       const unsigned wd = get_width(n);
-		       std::vector<RTLIL::State> bits(wd);
-		       unsigned int val01 = 0;
-		       unsigned int valzx = 0;
-		       for (unsigned i = 0; i < wd; i++) {
-			       if (i % 32 == 0) {
-			               val01 = get_param_uns32(inst, 2*(i / 32));
-				       valzx = get_param_uns32(inst, 2*(i / 32) + 1);
-			       }
-			       switch(((val01 >> (i%32))&1)+((valzx >> (i%32))&1)*2)
-			       {
-			       case 0:
-			               bits[i] = RTLIL::State::S0;
-				       break;
-			       case 1:
-				       bits[i] = RTLIL::State::S1;
-				       break;
-			       case 2:
-				       bits[i] = RTLIL::State::Sz;
-				       break;
-			       case 3:
-				       bits[i] = RTLIL::State::Sx;
-				       break;
-			       }
+		{
+			const unsigned wd = get_width(n);
+			std::vector<RTLIL::State> bits(wd);
+			unsigned int val01 = 0;
+			unsigned int valzx = 0;
+			for (unsigned i = 0; i < wd; i++) {
+				if (i % 32 == 0) {
+					val01 = get_param_uns32(inst, 2*(i / 32));
+					valzx = get_param_uns32(inst, 2*(i / 32) + 1);
+				}
+				switch(((val01 >> (i%32))&1)+((valzx >> (i%32))&1)*2)
+				{
+				case 0:
+					bits[i] = RTLIL::State::S0;
+					break;
+				case 1:
+					bits[i] = RTLIL::State::S1;
+					break;
+				case 2:
+					bits[i] = RTLIL::State::Sz;
+					break;
+				case 3:
+					bits[i] = RTLIL::State::Sx;
+					break;
+				}
 
-		       }
-		       return RTLIL::SigSpec(RTLIL::Const(bits));
+			}
+			return RTLIL::SigSpec(RTLIL::Const(bits));
 		}
 	case Id_Const_UL32: // zero padded 01ZX
-	        {
-		       const unsigned wd = get_width(n);
-		       std::vector<RTLIL::State> bits(wd);
-		       unsigned int val01 = get_param_uns32(inst, 0);
-		       unsigned int valzx = get_param_uns32(inst, 0);
-		       for (unsigned i = 0; i < wd && i < 32; i++) {
-			       switch(((val01 >> i)&1)+((valzx >> i)&1)*2)
-			       {
-			       case 0:
-			               bits[i] = RTLIL::State::S0;
-				       break;
-			       case 1:
-				       bits[i] = RTLIL::State::S1;
-				       break;
-			       case 2:
-				       bits[i] = RTLIL::State::Sz;
-				       break;
-			       case 3:
-				       bits[i] = RTLIL::State::Sx;
-				       break;
-			       }
+		{
+			const unsigned wd = get_width(n);
+			std::vector<RTLIL::State> bits(wd);
+			unsigned int val01 = get_param_uns32(inst, 0);
+			unsigned int valzx = get_param_uns32(inst, 0);
+			for (unsigned i = 0; i < wd && i < 32; i++) {
+				switch(((val01 >> i)&1)+((valzx >> i)&1)*2)
+				{
+				case 0:
+					bits[i] = RTLIL::State::S0;
+					break;
+				case 1:
+					bits[i] = RTLIL::State::S1;
+					break;
+				case 2:
+					bits[i] = RTLIL::State::Sz;
+					break;
+				case 3:
+					bits[i] = RTLIL::State::Sx;
+					break;
+				}
 
-		       }
-		       return RTLIL::SigSpec(RTLIL::Const(bits));
+			}
+			return RTLIL::SigSpec(RTLIL::Const(bits));
 		}
 	case Id_Extract:
                 return get_src_extract(net_map, get_input_net(inst, 0), get_param_uns32(inst, 0), get_width(n));
@@ -331,7 +331,7 @@ static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net
 		Net dat;
 		switch(get_id(port_inst)) {
 		case Id_Mem_Rd:
-                case Id_Mem_Rd_Sync:
+		case Id_Mem_Rd_Sync:
 			dat = get_output(port_inst, 1);
 			addr = get_input_net(port_inst, 1);
 			nbr_rd++;
@@ -343,7 +343,7 @@ static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net
 			break;
 		case Id_Memory:
 		case Id_Memory_Init:
-		        port.id = 0;
+			port.id = 0;
 			break;
 		default:
 			log_assert(0);
@@ -412,9 +412,9 @@ static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net
 			rd_data.append(OUT(1));
 			rd_en.append(Const(1, 1));
 			break;
-                case Id_Mem_Rd_Sync:
-                        rd_clk_en.push_back(RTLIL::State::S1);
-                        rd_clk.append(IN(2));
+		case Id_Mem_Rd_Sync:
+			rd_clk_en.push_back(RTLIL::State::S1);
+			rd_clk.append(IN(2));
 			rd_addr.append(IN(1));
 			rd_data.append(OUT(1));
 			rd_en.append(IN(3));
@@ -494,17 +494,17 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 
 		Port_Idx nbr_inputs = get_nbr_inputs(m);
 		for (Port_Idx idx = 0; idx < nbr_inputs; idx++) {
-		    RTLIL::Wire *wire = module->addWire(
-			    to_str(get_input_name(m, idx)),
-			    get_input_width(m, idx));
-		    wire->port_input = true;
+			RTLIL::Wire *wire = module->addWire(
+				to_str(get_input_name(m, idx)),
+				get_input_width(m, idx));
+			wire->port_input = true;
 		}
 		Port_Idx nbr_outputs = get_nbr_outputs(m);
 		for (Port_Idx idx = 0; idx < nbr_outputs; idx++) {
-		    RTLIL::Wire *wire = module->addWire(
-			    to_str(get_output_name(m, idx)),
-			    get_output_width(m, idx));
-		    wire->port_output = true;
+			RTLIL::Wire *wire = module->addWire(
+				to_str(get_output_name(m, idx)),
+				get_output_width(m, idx));
+			wire->port_output = true;
 		}
 		module->fixup_ports();
 		return;
@@ -532,11 +532,11 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		Module_Id id = get_id(im);
 		switch (id) {
 		case Id_And:
-                case Id_Or:
-                case Id_Xor:
+		case Id_Or:
+		case Id_Xor:
 		case Id_Nand:
-                case Id_Nor:
-                case Id_Xnor:
+		case Id_Nor:
+		case Id_Xnor:
 		case Id_Add:
 		case Id_Sub:
 		case Id_Neg:
@@ -547,21 +547,21 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Adff:
 		case Id_Iadff:
 		case Id_Eq:
-                case Id_Ne:
-                case Id_Ult:
-                case Id_Ule:
-                case Id_Ugt:
-                case Id_Uge:
-                case Id_Slt:
-                case Id_Sle:
-                case Id_Sgt:
-                case Id_Sge:
+		case Id_Ne:
+		case Id_Ult:
+		case Id_Ule:
+		case Id_Ugt:
+		case Id_Uge:
+		case Id_Slt:
+		case Id_Sle:
+		case Id_Sgt:
+		case Id_Sge:
 		case Id_Not:
-                case Id_Red_Or:
-                case Id_Red_And:
-                case Id_Lsr:
-                case Id_Lsl:
-                case Id_Asr:
+		case Id_Red_Or:
+		case Id_Red_And:
+		case Id_Lsr:
+		case Id_Lsl:
+		case Id_Asr:
 		case Id_Smul:
 		case Id_Umul:
 		case Id_Sdiv:
@@ -573,21 +573,21 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Anyconst:
 		case Id_Anyseq:
 		case Id_Mem_Rd:
-                case Id_Mem_Rd_Sync:
-                case Id_User_None:
+		case Id_Mem_Rd_Sync:
+		case Id_User_None:
 			for (Port_Idx idx = 0; idx < get_nbr_outputs(im); idx++) {
 				Net o = get_output(inst, idx);
 				//  The wire may have been created for an output
 				if (!is_set(net_map, o)) {
 					RTLIL::Wire *wire =
-                                          module->addWire(NEW_ID, get_width(o));
+						module->addWire(NEW_ID, get_width(o));
 					set_src(net_map, o, wire);
 				}
 			}
 			break;
-                case Id_Assert:
-                case Id_Assume:
-                case Id_Cover:
+		case Id_Assert:
+		case Id_Assume:
+		case Id_Cover:
 		case Id_Assert_Cover:
 			//  No output
 			break;
@@ -619,13 +619,13 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Concatn:
 			//  Skip: these won't create cells.
 			break;
-                case Id_Edge:
-                  	//  The cell is ignored.
-                  	break;
+		case Id_Edge:
+			//  The cell is ignored.
+			break;
 		default:
 			log_cmd_error("Unsupported(1): instance %s of %s.\n",
-				      to_str(get_instance_name(inst)).c_str(),
-				      to_str(get_module_name(get_module(inst))).c_str());
+			              to_str(get_instance_name(inst)).c_str(),
+			              to_str(get_module_name(get_module(inst))).c_str());
 			return;
 		}
 	}
@@ -649,20 +649,20 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			module->addXor(to_str(iname), IN(0), IN(1), OUT(0));
 			break;
 		case Id_Nand:
-                        {
-                          SigSpec r = OUT(0);
-                          RTLIL::Wire *w = module->addWire(NEW_ID, r.size());
-                          module->addAnd(NEW_ID, IN(0), IN(1), w);
-                          module->addNot(to_str(iname), w, r);
-                        }
+			{
+				SigSpec r = OUT(0);
+				RTLIL::Wire *w = module->addWire(NEW_ID, r.size());
+				module->addAnd(NEW_ID, IN(0), IN(1), w);
+				module->addNot(to_str(iname), w, r);
+			}
 			break;
 		case Id_Nor:
-                        {
-                          SigSpec r = OUT(0);
-                          RTLIL::Wire *w = module->addWire(NEW_ID, r.size());
-                          module->addOr(NEW_ID, IN(0), IN(1), w);
-                          module->addNot(to_str(iname), w, r);
-                        }
+			{
+				SigSpec r = OUT(0);
+				RTLIL::Wire *w = module->addWire(NEW_ID, r.size());
+				module->addOr(NEW_ID, IN(0), IN(1), w);
+				module->addNot(to_str(iname), w, r);
+			}
 			break;
 		case Id_Xnor:
 			module->addXnor(to_str(iname), IN(0), IN(1), OUT(0));
@@ -737,8 +737,8 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			module->addDiv(to_str(iname), IN(0), IN(1), OUT(0), false);
 			break;
 		case Id_Srem:
-            // Yosys modulus usese Verilogs *remainder* behavior
-            // there is no signed modulus operator in Yosys
+			// Yosys modulus usese Verilogs *remainder* behavior
+			// there is no signed modulus operator in Yosys
 			module->addMod(to_str(iname), IN(0), IN(1), OUT(0), true);
 			break;
 		case Id_Umod:
@@ -749,7 +749,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			break;
 		case Id_Dff:
 		case Id_Idff:
-                        module->addDff(to_str(iname), IN(0), IN(1), OUT(0));
+			module->addDff(to_str(iname), IN(0), IN(1), OUT(0));
 			//  For idff, the initial value is set on the output
 			//  wire.
 			if (id == Id_Idff) {
@@ -777,36 +777,36 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 				module->addMux(NEW_ID, w0, w1, Sel1, OUT (0));
 			}
 			break;
-                case Id_User_None:
-                        {
-                            RTLIL::Cell *cell = module->addCell(
-                                    to_str(iname),
-                                    to_str(get_module_name(get_module(inst))));
-                            GhdlSynth::Module submod = get_module(inst);
-                            Port_Idx nbr_inputs = get_nbr_inputs(submod);
-                            for (Port_Idx idx = 0; idx < nbr_inputs; idx++) {
-                                cell->setPort(to_str(get_input_name(submod, idx)), IN(idx));
-                            }
-                            Port_Idx nbr_outputs = get_nbr_outputs(submod);
-                            for (Port_Idx idx = 0; idx < nbr_outputs; idx++) {
-                                cell->setPort(to_str(get_output_name(submod, idx)), OUT(idx));
-                            }
-                            break;
-                        }
+		case Id_User_None:
+			{
+				RTLIL::Cell *cell = module->addCell(
+					to_str(iname),
+					to_str(get_module_name(get_module(inst))));
+				GhdlSynth::Module submod = get_module(inst);
+				Port_Idx nbr_inputs = get_nbr_inputs(submod);
+				for (Port_Idx idx = 0; idx < nbr_inputs; idx++) {
+					cell->setPort(to_str(get_input_name(submod, idx)), IN(idx));
+				}
+				Port_Idx nbr_outputs = get_nbr_outputs(submod);
+				for (Port_Idx idx = 0; idx < nbr_outputs; idx++) {
+					cell->setPort(to_str(get_output_name(submod, idx)), OUT(idx));
+				}
+			}
+			break;
 		case Id_Signal:
 		case Id_Isignal:
 			{
 				Net sig = get_input_net(inst, 0);
-                                if (is_set(net_map, sig)) {
-                                    Wire *w = net_map.at(sig.id);
-				    /* Do not rename ports.  */
-                                    if (w && !w->port_input && !w->port_output)
-                                        module->rename(w, to_str(iname));
-                                }
+				if (is_set(net_map, sig)) {
+					Wire *w = net_map.at(sig.id);
+					/* Do not rename ports.  */
+					if (w && !w->port_input && !w->port_output)
+						module->rename(w, to_str(iname));
+				}
 			}
 			break;
 		case Id_Output:
-                case Id_Port:
+		case Id_Port:
 			module->connect(OUT (0), IN (0));
 			break;
 		case Id_Assert:
@@ -835,9 +835,9 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Memory_Init:
 			//  Will be handled later.
 			memories.push_back(inst);
-		        break;
+			break;
 		case Id_Mem_Rd:
-                case Id_Mem_Rd_Sync:
+		case Id_Mem_Rd_Sync:
 		case Id_Mem_Wr_Sync:
 			break;
 		case Id_Const_UB32:
@@ -857,14 +857,14 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Concat3:
 		case Id_Concat4:
 		case Id_Concatn:
-                case Id_Edge:
+		case Id_Edge:
 			break;
 #undef IN
 #undef OUT
 		default:
 			log_cmd_error("Unsupported(2): instance %s of %s.\n",
-				      to_str(get_instance_name(inst)).c_str(),
-				      to_str(get_module_name(get_module(inst))).c_str());
+			              to_str(get_instance_name(inst)).c_str(),
+			              to_str(get_module_name(get_module(inst))).c_str());
 			return;
 		}
 	}
@@ -883,7 +883,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		wire->port_id = nbr_inputs + idx + 1;
 		wire->port_output = true;
 		wire->width = get_width(output_out);
-                module->connect(wire, get_src(net_map, output_out));
+		module->connect(wire, get_src(net_map, output_out));
 	}
 
 	module->fixup_ports();
@@ -967,8 +967,7 @@ struct GhdlPass : public Pass {
 				cmd_argv[i] = args[i + 1].c_str();
 
 			GhdlSynth::Module top;
-			top = ghdl_synth
-			  (!work_initialized, cmd_argc, cmd_argv);
+			top = ghdl_synth(!work_initialized, cmd_argc, cmd_argv);
 			work_initialized++;
 			if (!is_valid(top)) {
 				log_cmd_error("vhdl import failed.\n");
@@ -984,3 +983,5 @@ struct GhdlPass : public Pass {
 } GhdlPass;
 
 YOSYS_NAMESPACE_END
+
+// vim: ts=8:sw=8:noet
