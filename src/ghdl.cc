@@ -65,6 +65,7 @@ static Wire *get_wire(std::vector<RTLIL::Wire *> &net_map, Net n)
 }
 
 static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n);
+static RTLIL::SigSpec get_src_extract(std::vector<RTLIL::Wire *> &net_map, Net n, unsigned off, unsigned wd);
 
 static RTLIL::SigSpec get_src_concat(std::vector<RTLIL::Wire *> &net_map, Instance inst, unsigned nbr_in)
 {
@@ -76,10 +77,57 @@ static RTLIL::SigSpec get_src_concat(std::vector<RTLIL::Wire *> &net_map, Instan
         return res;
 }
 
+//  Extract WD bits at OFF from concatenation INST.  Do not compute unused bits.
+static RTLIL::SigSpec get_src_concat_extract(std::vector<RTLIL::Wire *> &net_map, Instance inst, unsigned nbr_in, unsigned off, unsigned wd)
+{
+        RTLIL::SigSpec res;
+
+        //  ConcatN means { I0; I1; .. IN}, but append() adds
+        //  bits to the MSB side.
+        for (unsigned i = nbr_in; i > 0; i--) {
+                Net p = get_input_net(inst, (i - 1));
+                unsigned pw = get_width(p);
+                if (off < pw) {
+                        unsigned sub_wd = (off + wd < pw ? wd : pw - off);
+                        res.append(get_src_extract(net_map, p, off, sub_wd));
+                        //  sub_wd bits have been extracted.
+                        wd -= sub_wd;
+                        if (wd == 0)
+                                break;
+                        off = 0;
+                }
+                else {
+                        off -= pw;
+                }
+        }
+        return res;
+}
+
+//  Extract WD bits at OFF from N.  Try to avoid computing unused bits as it may result in an infinite recursion if parts of a concatenation are defined by the concatenation.
 static RTLIL::SigSpec get_src_extract(std::vector<RTLIL::Wire *> &net_map, Net n, unsigned off, unsigned wd)
 {
-        RTLIL::SigSpec res = get_src(net_map, n);
-        return res.extract(off, wd);
+	Instance inst = get_net_parent(n);
+	switch(get_id(inst)) {
+        case Id_Signal:
+	case Id_Isignal:
+	case Id_Port:
+        case Id_Output:
+                return get_src_extract(net_map, get_input_net(inst, 0), off, wd);
+	case Id_Extract:
+                log_assert(wd <= get_width(n));
+                return get_src_extract(net_map, get_input_net(inst, 0), get_param_uns32(inst, 0) + off, wd);
+	case Id_Concat2:
+                return get_src_concat_extract(net_map, inst, 2, off, wd);
+	case Id_Concat3:
+                return get_src_concat_extract(net_map, inst, 3, off, wd);
+	case Id_Concat4:
+                return get_src_concat_extract(net_map, inst, 4, off, wd);
+	case Id_Concatn:
+                return get_src_concat_extract(net_map, inst, get_param_uns32(inst, 0), off, wd);
+        default:
+                RTLIL::SigSpec res = get_src(net_map, n);
+                return res.extract(off, wd);
+        }
 }
 
 static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
