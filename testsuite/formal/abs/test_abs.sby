@@ -1,0 +1,13 @@
+[options]
+#depth 6
+mode prove
+
+[engines]
+smtbmc z3
+
+[script]
+ghdl --std=08 test_abs.vhd -e ent
+prep -top ent
+
+[files]
+test_abs.vhd
