@@ -8,3 +8,4 @@
 *.o
 *.so
 
+testsuite/**/work/

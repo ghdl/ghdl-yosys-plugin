@@ -557,6 +557,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Sgt:
 		case Id_Sge:
 		case Id_Not:
+		case Id_Abs:
 		case Id_Red_Or:
 		case Id_Red_And:
 		case Id_Lsr:
@@ -678,6 +679,14 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			break;
 		case Id_Not:
 			module->addNot(to_str(iname), IN(0), OUT(0));
+			break;
+		case Id_Abs:
+			{
+				SigSpec isNegative = IN(0).extract(IN(0).size() - 1, 1);
+				RTLIL::Wire *negated = module->addWire(NEW_ID, IN(0).size());
+				module->addNeg(NEW_ID, IN(0), negated);
+				module->addMux(NEW_ID, IN(0), negated, isNegative, OUT(0));
+			}
 			break;
 		case Id_Eq:
 			module->addEq(to_str(iname), IN(0), IN(1), OUT(0));
