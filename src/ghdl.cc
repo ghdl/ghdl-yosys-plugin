@@ -563,6 +563,10 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Lsr:
 		case Id_Lsl:
 		case Id_Asr:
+		case Id_Smin:
+		case Id_Umin:
+		case Id_Smax:
+		case Id_Umax:
 		case Id_Smul:
 		case Id_Umul:
 		case Id_Sdiv:
@@ -732,6 +736,23 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			break;
 		case Id_Asr:
 			module->addSshr(to_str(iname), IN(0), IN(1), OUT(0), true);
+			break;
+		case Id_Smin:
+		case Id_Umin:
+		case Id_Smax:
+		case Id_Umax:
+			{
+				bool is_signed = (id == Id_Smin || id == Id_Smax);
+
+				RTLIL::Wire *select_rhs = module->addWire(NEW_ID);
+				if (id == Id_Smin || id == Id_Umin) {
+					module->addGt(NEW_ID, IN(0), IN(1), select_rhs, is_signed);
+				} else {
+					module->addLt(NEW_ID, IN(0), IN(1), select_rhs, is_signed);
+				}
+
+				module->addMux(to_str(iname), IN(0), IN(1), select_rhs, OUT(0));
+			}
 			break;
 		case Id_Smul:
 			module->addMul(to_str(iname), IN(0), IN(1), OUT(0), true);
