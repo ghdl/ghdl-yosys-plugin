@@ -100,7 +100,7 @@ Alternatively, it is possible to analyze, elaborate and synthesize VHDL sources 
 
 ## Docker
 
-Docker image [`ghdl/synth:beta`](https://cloud.docker.com/u/ghdl/repository/docker/ghdl/synth/tags) includes yosys, and the ghdl module (shared library). These can be used to synthesize designs straightaway. For example:
+Docker image [`ghdl/synth:beta`](https://hub.docker.com/r/ghdl/synth/tags) includes yosys, and the ghdl module (shared library). These can be used to synthesize designs straightaway. For example:
 
 ```sh
 docker run --rm -t \
@@ -109,6 +109,8 @@ docker run --rm -t \
   ghdl/synth:beta \
   yosys -m ghdl -p 'ghdl icestick/leds.vhdl icestick/blink.vhdl -e leds; synth_ice40 -blif leds.blif'
 ```
+
+> In a system with [docker](https://docs.docker.com/install) installed, the image is automatically downloaded the first time invoked.
 
 Furthermore, the snippet above can be extended in order to P&R the design with [nextpnr](https://github.com/YosysHQ/nextpnr) and generate a bitstream with [icestorm](https://github.com/cliffordwolf/icestorm) tools:
 
