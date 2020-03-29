@@ -31,6 +31,7 @@ USING_YOSYS_NAMESPACE
 
 using namespace GhdlSynth;
 
+//  Convert an Sname to a string.
 static std::string to_str(Sname name)
 {
 	std::string res;
@@ -245,7 +246,7 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 			const unsigned wd = get_width(n);
 			std::vector<RTLIL::State> bits(wd);
 			unsigned int val01 = get_param_uns32(inst, 0);
-			unsigned int valzx = get_param_uns32(inst, 0);
+			unsigned int valzx = get_param_uns32(inst, 1);
 			for (unsigned i = 0; i < wd && i < 32; i++) {
 				switch(((val01 >> i)&1)+((valzx >> i)&1)*2)
 				{
@@ -504,6 +505,8 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			RTLIL::Wire *wire = module->addWire(
 				to_str(get_output_name(m, idx)),
 				get_output_width(m, idx));
+			if (get_inout_flag(m, idx))
+				wire->port_input = true;
 			wire->port_output = true;
 		}
 		module->fixup_ports();
@@ -511,10 +514,10 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 	}
 
 	//  Create input ports.
-	//  They correspond to ouputs of the self instance.
 	std::vector<RTLIL::Wire *> net_map;
 	Port_Idx nbr_inputs = get_nbr_inputs(m);
 	for (Port_Idx idx = 0; idx < nbr_inputs; idx++) {
+		//  They correspond to ouputs of the self instance.
 		Net port = get_output(self_inst, idx);
 
 		RTLIL::Wire *wire = module->addWire(to_str(get_input_name(m, idx)));
@@ -522,6 +525,26 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		wire->port_input = true;
 		wire->width = get_width(port);
 		set_src(net_map, port, wire);
+	}
+	//  Create inout ports, so that they can be read.
+	Port_Idx nbr_outputs = get_nbr_outputs(m);
+	for (Port_Idx idx = 0; idx < nbr_outputs; idx++) {
+		if (!get_inout_flag(m, idx))
+			continue;
+
+		//  They correspond to inputs of the self instance.
+		Net output_out = get_input_net(self_inst, idx);
+
+		//  Create wire
+		RTLIL::Wire *wire = module->addWire(to_str(get_output_name(m, idx)));
+		wire->port_id = nbr_inputs + idx + 1;
+		wire->port_output = true;
+		wire->port_input = true;
+		wire->width = get_width(output_out);
+
+		Instance inout_inst = get_net_parent(output_out);
+		Net inout_rd = get_output(inout_inst, 0);
+		set_src(net_map, inout_rd, wire);
 	}
 
 	//  Create wires for outputs of (real) cells.
@@ -589,6 +612,9 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 					set_src(net_map, o, wire);
 				}
 			}
+			break;
+		case Id_Inout:
+			//  The wire was created when the port was.
 			break;
 		case Id_Assert:
 		case Id_Assume:
@@ -826,6 +852,8 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Signal:
 		case Id_Isignal:
 			{
+				// No cell is created for Id_Signal or Id_Isignal.
+				// But try to keep the name.
 				Net sig = get_input_net(inst, 0);
 				if (is_set(net_map, sig)) {
 					Wire *w = net_map.at(sig.id);
@@ -838,6 +866,11 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Output:
 		case Id_Port:
 			module->connect(OUT (0), IN (0));
+			break;
+		case Id_Inout:
+			// Virtual gate.
+			// Connect input to output.
+			module->connect(OUT(0), IN(0));
 			break;
 		case Id_Assert:
 			module->addAssert(to_str(iname), IN(0), State::S1);
@@ -904,8 +937,10 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 	}
 
 	//  Create output ports
-	Port_Idx nbr_outputs = get_nbr_outputs(m);
 	for (Port_Idx idx = 0; idx < nbr_outputs; idx++) {
+		if (get_inout_flag(m, idx))
+			continue;
+
 		Net output_out = get_input_net(self_inst, idx);
 
 		//  Create wire
@@ -913,6 +948,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		wire->port_id = nbr_inputs + idx + 1;
 		wire->port_output = true;
 		wire->width = get_width(output_out);
+
 		module->connect(wire, get_src(net_map, output_out));
 	}
 
