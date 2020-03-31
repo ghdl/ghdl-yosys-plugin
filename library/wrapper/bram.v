@@ -1,7 +1,7 @@
 // Workaround BRAM implementation for fifo buffer
 // 2020 <hackfin@section5.ch>
 
-module bram_2psync_6_8_59fe624214af9b8daa183282288d5eb56b321f14 #(
+module bram_2psync #(
 	parameter DATA = 8,
 	parameter ADDR = 6
 ) (

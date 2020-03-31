@@ -62,21 +62,20 @@ architecture behaviour of FifoBuffer is
 
 	component bram_2psync is
 		generic (
-			ADDR_W      : natural := 6;
-			DATA_W      : natural := 16;
-			SYN_RAMTYPE : string := "block_ram"
+			ADDR      : natural := 6;
+			DATA      : natural := 16
 		);
 		port (
 			-- Port A
 			a_we    : in  std_logic;
-			a_addr  : in  unsigned(ADDR_W-1 downto 0);
-			a_write : in  unsigned(DATA_W-1 downto 0);
-			a_read  : out unsigned(DATA_W-1 downto 0);
+			a_addr  : in  unsigned(ADDR-1 downto 0);
+			a_write : in  unsigned(DATA-1 downto 0);
+			a_read  : out unsigned(DATA-1 downto 0);
 			-- Port B
 			b_we    : in  std_logic;
-			b_addr  : in  unsigned(ADDR_W-1 downto 0);
-			b_write : in  unsigned(DATA_W-1 downto 0);
-			b_read  : out unsigned(DATA_W-1 downto 0);
+			b_addr  : in  unsigned(ADDR-1 downto 0);
+			b_write : in  unsigned(DATA-1 downto 0);
+			b_read  : out unsigned(DATA-1 downto 0);
 			clk     : in  std_logic
 		);
 	end component bram_2psync;
@@ -160,8 +159,7 @@ fsm:
 
 ram:
 	bram_2psync
-	generic map ( ADDR_W => ADDR_W, DATA_W => DATA_W,
-		SYN_RAMTYPE => SYN_RAMTYPE)
+	generic map ( ADDR => ADDR_W, DATA => DATA_W)
 	port map (
 		a_we    => '0',
 		a_addr  => optr,

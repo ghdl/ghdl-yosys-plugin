@@ -21,10 +21,9 @@ VHDL_SYN_FILES += soc_iomap_pkg.vhdl
 VHDL_SYN_FILES += uart.vhdl uart_tx.vhdl uart_rx.vhdl fifobuf.vhdl
 
 TOPLEVEL = versa_ecp5_top
-TOPLEVEL_PARAMETER = _$(CLK_FREQ)
+TOPLEVEL_PARAMETER =
 
 VERILOG_FILES = $(LIB)/wrapper/primitives.v
-VERILOG_FILES += $(LIB)/wrapper/wrapper.v
 VERILOG_FILES += $(LIB)/wrapper/bram.v
 
 SVFFILE = versa_ecp5_top.svf
@@ -39,10 +38,9 @@ lib:
 	mkdir $@
 
 lib/ecp5um-std93.cf: $(LIB)/ecp5u/components.vhdl | lib
-	$(GHDL) -i --workdir=$(dir $@) --work=ecp5um \
-		$< 
+	$(GHDL) -i --workdir=$(dir $@) --work=ecp5um $<
 
-pll_mac.vhd: $(DEPENDENCIES) 
+pll_mac.vhd: $(DEPENDENCIES)
 
 prog: $(SVFFILE)
 	$(OPENOCD) -f $(OPENOCD_JTAG_CONFIG) -f $(OPENOCD_DEVICE_CONFIG) \

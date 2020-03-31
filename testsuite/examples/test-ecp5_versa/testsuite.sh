@@ -16,7 +16,6 @@ VHDL_SYN_FILES="$src/versa_ecp5_top.vhdl \
 
 VERILOG_FILES="\
  $top/library/wrapper/primitives.v \
- $top/library/wrapper/wrapper.v \
  $top/library/wrapper/bram.v
 "
 
