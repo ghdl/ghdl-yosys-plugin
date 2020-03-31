@@ -56,6 +56,7 @@ static std::string to_str(Sname name)
 	return res;
 }
 
+//  Get the corresponding wire for net N (or null if not found).
 static Wire *get_wire(std::vector<RTLIL::Wire *> &net_map, Net n)
 {
 	log_assert(n.id != 0);
@@ -65,9 +66,44 @@ static Wire *get_wire(std::vector<RTLIL::Wire *> &net_map, Net n)
 	return res;
 }
 
+//  Convert bit I of V to State.
+static RTLIL::State logic32_to_state(struct logic_32 v, unsigned int i)
+{
+	i &= 31;
+
+	switch((((v.va >> i)) & 1) + ((v.zx >> i) & 1)*2)
+	{
+	case 0:
+		return RTLIL::State::S0;
+	case 1:
+		return RTLIL::State::S1;
+	case 2:
+		return RTLIL::State::Sz;
+	case 3:
+	default:
+		return RTLIL::State::Sx;
+	}
+}
+
+//  Convert V to a Const.
+static RTLIL::Const pval_to_const(Pval v)
+{
+	const unsigned wd = get_pval_length(v);
+	std::vector<RTLIL::State> bits(wd);
+	struct logic_32 val;
+
+	for (unsigned i = 0; i < wd; i++) {
+		if (i % 32 == 0)
+			val = read_pval(v, i / 32);
+		bits[i] = logic32_to_state(val, i);
+	}
+	return RTLIL::Const(bits);
+}
+
 static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n);
 static RTLIL::SigSpec get_src_extract(std::vector<RTLIL::Wire *> &net_map, Net n, unsigned off, unsigned wd);
 
+//  Concatenate the NBR_IN inputs of INST (ie handle Id_ConcatX).
 static RTLIL::SigSpec get_src_concat(std::vector<RTLIL::Wire *> &net_map, Instance inst, unsigned nbr_in)
 {
         RTLIL::SigSpec res;
@@ -211,32 +247,17 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 		{
 			return SigSpec(RTLIL::State::S0, get_width(n));
 		}
-	case Id_Const_Log: // arbitrary lenght 01ZX
+	case Id_Const_Log: // arbitrary length 01ZX
 		{
 			const unsigned wd = get_width(n);
 			std::vector<RTLIL::State> bits(wd);
-			unsigned int val01 = 0;
-			unsigned int valzx = 0;
+			struct logic_32 v;
 			for (unsigned i = 0; i < wd; i++) {
 				if (i % 32 == 0) {
-					val01 = get_param_uns32(inst, 2*(i / 32));
-					valzx = get_param_uns32(inst, 2*(i / 32) + 1);
+					v.va = get_param_uns32(inst, 2*(i / 32));
+					v.zx = get_param_uns32(inst, 2*(i / 32) + 1);
 				}
-				switch(((val01 >> (i%32))&1)+((valzx >> (i%32))&1)*2)
-				{
-				case 0:
-					bits[i] = RTLIL::State::S0;
-					break;
-				case 1:
-					bits[i] = RTLIL::State::S1;
-					break;
-				case 2:
-					bits[i] = RTLIL::State::Sz;
-					break;
-				case 3:
-					bits[i] = RTLIL::State::Sx;
-					break;
-				}
+				bits[i] = logic32_to_state(v, i);
 
 			}
 			return RTLIL::SigSpec(RTLIL::Const(bits));
@@ -467,6 +488,8 @@ static void add_formal_input(RTLIL::Module *module, std::vector<RTLIL::Wire *> &
 
 static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 {
+	Instance self_inst = get_self_instance (m);
+
 	std::string module_name = to_str(get_module_name(m));
 
 	if (design->has(module_name)) {
@@ -489,7 +512,6 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 	//  List of all memories.
 	std::vector<Instance> memories;
 
-	Instance self_inst = get_self_instance (m);
 	if (!is_valid(self_inst)) { // blackbox
 		module->set_bool_attribute("\\blackbox");
 
@@ -509,6 +531,11 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 				wire->port_input = true;
 			wire->port_output = true;
 		}
+		Param_Idx nbr_params = get_nbr_params(m);
+		for (Param_Idx idx = 0; idx < nbr_params; idx++) {
+			module->avail_parameters.insert(to_str(get_param_name(m, idx)));
+		}
+
 		module->fixup_ports();
 		return;
 	}
@@ -603,6 +630,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Mem_Rd:
 		case Id_Mem_Rd_Sync:
 		case Id_User_None:
+		case Id_User_Parameters:
 			for (Port_Idx idx = 0; idx < get_nbr_outputs(im); idx++) {
 				Net o = get_output(inst, idx);
 				//  The wire may have been created for an output
@@ -834,6 +862,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			}
 			break;
 		case Id_User_None:
+		case Id_User_Parameters:
 			{
 				RTLIL::Cell *cell = module->addCell(
 					to_str(iname),
@@ -846,6 +875,15 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 				Port_Idx nbr_outputs = get_nbr_outputs(submod);
 				for (Port_Idx idx = 0; idx < nbr_outputs; idx++) {
 					cell->setPort(to_str(get_output_name(submod, idx)), OUT(idx));
+				}
+				if (id == Id_User_Parameters) {
+					Param_Idx nbr_params = get_nbr_params(submod);
+					for (Param_Idx idx = 0; idx < nbr_params; idx++) {
+						RTLIL::Const cst = pval_to_const(get_param_pval(inst, idx));
+						if (get_param_type(submod, idx) == Param_Pval_String)
+							cst.flags |= RTLIL::CONST_FLAG_STRING;
+						cell->setParam(to_str(get_param_name(submod, idx)), cst);
+					}
 				}
 			}
 			break;
@@ -960,6 +998,7 @@ static void import_netlist(RTLIL::Design *design, GhdlSynth::Module top)
 	for (GhdlSynth::Module m = get_first_sub_module (top);
 	     is_valid(m);
 	     m = get_next_sub_module (m)) {
+		//  Do not try to synthesize predefined gates.
 		if (get_id (m) < Id_User_None)
 			continue;
 		import_module(design, m);
