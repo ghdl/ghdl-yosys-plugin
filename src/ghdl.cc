@@ -844,11 +844,35 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			break;
 		case Id_Adff:
 		case Id_Iadff:
-			module->addAdff(to_str(iname), IN(0), IN(2), IN(1), OUT(0), IN(3).as_const());
-			//  For iadff, the initial value is set on the output
-			//  wire.
-			if (id == Id_Iadff) {
-				net_map[get_output(inst, 0).id]->attributes["\\init"] = IN(4).as_const();
+		        {
+				SigSpec rval = IN(3);
+				SigSpec clk = IN(0);
+				SigSpec arst = IN(2);
+				SigSpec d = IN(1);
+				SigSpec q = OUT(0);
+
+				// If the reset value (rval) is a constant, use a classic asynchronous dff.
+				if (rval.is_fully_const())
+					module->addAdff(to_str(iname), clk, arst, d, q, rval.as_const());
+				else {
+					// Otherwise, use a dffsr.
+					// set <= arst ? d : 0
+					SigSpec zero = SigSpec(RTLIL::State::S0, d.size());
+					RTLIL::Wire *set = module->addWire(NEW_ID, d.size());
+					module->addMux(NEW_ID, zero, d, arst, set);
+					//  clr <= arst ? ~d : 0
+					RTLIL::Wire *d_n = module->addWire(NEW_ID, d.size());
+					module->addNot(NEW_ID, d, d_n);
+					RTLIL::Wire *clr = module->addWire(NEW_ID, d.size());
+					module->addMux(NEW_ID, zero, d_n, arst, clr);
+					//  Use dffsr
+					module->addDffsr(to_str(iname), clk, set, clr, d, q);
+				}
+				//  For iadff, the initial value is set on the output
+				//  wire.
+				if (id == Id_Iadff) {
+					net_map[get_output(inst, 0).id]->attributes["\\init"] = IN(4).as_const();
+				}
 			}
 			break;
 		case Id_Mux4:
