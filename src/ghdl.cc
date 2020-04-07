@@ -622,6 +622,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Sdiv:
 		case Id_Udiv:
 		case Id_Srem:
+		case Id_Smod:
 		case Id_Umod:
 		case Id_Allconst:
 		case Id_Allseq:
@@ -821,6 +822,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			module->addDiv(to_str(iname), IN(0), IN(1), OUT(0), false);
 			break;
 		case Id_Srem:
+		case Id_Smod:
 			// Yosys modulus usese Verilogs *remainder* behavior
 			// there is no signed modulus operator in Yosys
 			module->addMod(to_str(iname), IN(0), IN(1), OUT(0), true);
