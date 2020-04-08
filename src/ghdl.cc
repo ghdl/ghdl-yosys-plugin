@@ -883,13 +883,14 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			module->addDiv(to_str(iname), IN(0), IN(1), OUT(0), false);
 			break;
 		case Id_Srem:
-		case Id_Smod:
-			// Yosys modulus uses Verilogs *remainder* behavior
-			// there is no signed modulus operator in Yosys
+			// Id_Urem would be the same as Id_Umod, so only the latter exists
+			// $mod: modulo of truncating division, "rem" in VHDL
 			module->addMod(to_str(iname), IN(0), IN(1), OUT(0), true);
 			break;
+		case Id_Smod:
 		case Id_Umod:
-			module->addMod(to_str(iname), IN(0), IN(1), OUT(0), false);
+			// $modfloor: modulo of flooring division, "mod" in VHDL
+			module->addModFloor(to_str(iname), IN(0), IN(1), OUT(0), id == Id_Smod);
 			break;
 		case Id_Mux2:
 			module->addMux(to_str(iname), IN(1), IN(2), IN(0), OUT(0));
