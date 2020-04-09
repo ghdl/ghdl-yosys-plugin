@@ -1,48 +1,42 @@
-# ghdlsynth-beta: VHDL synthesis (based on [ghdl](https://github.com/ghdl/ghdl) and [yosys](https://github.com/YosysHQ/yosys))
+<p align="center">
+  <a title="Read the Docs" href="http://ghdl.readthedocs.io/en/latest/using/Synthesis.html"><img src="https://img.shields.io/readthedocs/ghdl.svg?longCache=true&style=flat-square&logo=read-the-docs&logoColor=e8ecef&label=ghdl.rtfd.io"></a><!--
+  -->
+  <a title="Join the chat at https://gitter.im/ghdl1/Lobby" href="https://gitter.im/ghdl1/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge"><img src="https://img.shields.io/badge/chat-on%20gitter-4db797.svg?longCache=true&style=flat-square&logo=gitter&logoColor=e8ecef"></a><!--
+  -->
+  <a title="Docker Images" href="https://github.com/ghdl/docker"><img src="https://img.shields.io/docker/pulls/ghdl/synth.svg?logo=docker&logoColor=e8ecef&style=flat-square&label=docker"></a><!--
+  -->
+  <a title="'push' workflow Status" href="https://github.com/ghdl/ghdl-yosys-plugin/actions?query=workflow%3Apush"><img alt="'push' workflow Status" src="https://img.shields.io/github/workflow/status/ghdl/ghdl-yosys-plugin/push?longCache=true&style=flat-square&label=GHA&logo=github"></a>
+</p>
 
-**This is experimental and work in progress!**
+# ghdl-yosys-plugin: VHDL synthesis (based on [ghdl](https://github.com/ghdl/ghdl) and [yosys](https://github.com/YosysHQ/yosys))
 
-> TODO: explain purpose of program.
->
-> - What is the relationship with GHDL? Is it going to be integrated in GHDL once it is fully featured?
-> - What kind of VHDL do we want to support? (GHDL fully supports the 1987, 1993, 2002 versions of the IEEE 1076 VHDL standard, and partially the latest 2008 revision, according to the website)
->- Explain expected input and outputs.
->- Create table with features of VHDL that are supported, WIP and pending.
+**This is experimental and work in progress!** See [ghdl.rtfd.io: Using/Synthesis](http://ghdl.readthedocs.io/en/latest/using/Synthesis.html).
+
+- [Build as a module (shared library)](#build-as-a-module-shared-library)
+- [Build as part of yosys (not recommended)](#build-as-part-of-yosys-not-recommended)
+- [Usage](#Usage)
+- [Docker](#Docker)
+
+> TODO: Create table with features of VHDL that are supported, WIP and pending.
+
+---
 
 ## Build as a module (shared library)
 
 - Get and install [yosys](https://github.com/YosysHQ/yosys).
-- Get sources, build and install [ghdl](https://github.com/ghdl/ghdl). Configure ghdl using at least `--enable-libghdl` and `--enable-synth`:
+- Get sources, build and install [ghdl](https://github.com/ghdl/ghdl). Ensure that GHDL is configured with synthesis features (enabled by default since v0.37). See [Building GHDL](https://github.com/ghdl/ghdl#building-ghdl).
 
-```sh
-$ ./configure --enable-libghdl --enable-synth
-$ make
-$ make install
-```
-
-> NOTE: GHDL must be built with the latest version of GNAT (`gnat-8`).
+> NOTE: GHDL must be built with at least version of 8 GNAT (`gnat-8`).
 
 > HINT: The default build prefix is `/usr/local`. Sudo permission might be required to install tools there.
 
-- Get and build ghdlsynth-beta:
-
-```sh
-make
-```
+- Get and build ghdl-yosys-plugin: `make`.
 
 > HINT: If ghdl is not available in the PATH, set `GHDL` explicitly, e.g.: `make GHDL=/my/path/to/ghdl`.
 
-The output is a shared library (`ghdl.so` on GNU/Linux), which can be used directly:
+The output is a shared library (`ghdl.so` on GNU/Linux), which can be used directly: `yosys -m ghdl.so`.
 
-```sh
-$ yosys -m ghdl.so
-```
-
-To install the module, the library must be copied to `YOSYS_PREFIX/share/yosys/plugins/ghdl.so`, where `YOSYS_PREFIX` is the installation path of yosys. This can be achieved through a make target:
-
-```sh
-make install
-```
+To install the module, the library must be copied to `YOSYS_PREFIX/share/yosys/plugins/ghdl.so`, where `YOSYS_PREFIX` is the installation path of yosys. This can be achieved through a make target: `make install`.
 
 Alternatively, the shared library can be copied/installed along with ghdl:
 
@@ -100,7 +94,7 @@ Alternatively, it is possible to analyze, elaborate and synthesize VHDL sources 
 
 ## Docker
 
-Docker image [`ghdl/synth:beta`](https://hub.docker.com/r/ghdl/synth/tags) includes yosys, and the ghdl module (shared library). These can be used to synthesize designs straightaway. For example:
+Docker image [`ghdl/synth:beta`](https://hub.docker.com/r/ghdl/synth/tags) includes yosys and the ghdl module (shared library). These can be used to synthesize designs straightaway. For example:
 
 ```sh
 docker run --rm -t \
