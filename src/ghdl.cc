@@ -493,7 +493,10 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 	std::string module_name = to_str(get_module_name(m));
 
 	if (design->has(module_name)) {
-		log_cmd_error("Re-definition of module `%s'.\n", module_name.c_str());
+		if (is_valid(self_inst)) {
+			//  Error message only for non-black-boxes.
+			log_cmd_error("Re-definition of module `%s'.\n", module_name.c_str());
+		}
 		return;
 	}
 
