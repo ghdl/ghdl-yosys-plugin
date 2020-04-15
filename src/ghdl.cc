@@ -323,6 +323,29 @@ static void set_src(std::vector<RTLIL::Wire *> &net_map, Net n, Wire *wire)
 	net_map[n.id] = wire;
 }
 
+//  Extract the polarity from net N (output of an edge gate).
+static RTLIL::State extract_clk_pol(Net n)
+{
+	Instance edge = get_net_parent(n);
+
+	switch (get_id(edge)) {
+	case Id_Posedge:
+		return RTLIL::State::S1;
+	case Id_Negedge:
+		return RTLIL::State::S0;
+	default:
+		log_cmd_error("clock edge expected\n");
+		return RTLIL::State::S1;
+	}
+}
+
+//  Extract the clock from net N (output of an edge gate).
+static RTLIL::SigSpec extract_clk_sig(std::vector<RTLIL::Wire *> &net_map, Net n)
+{
+	Instance edge = get_net_parent(n);
+	return get_src(net_map, get_input_net(edge, 0));
+}
+
 //  INST is an Id_Memory or an Id_Memory_Init
 //  All the inputs have been connected, all the outputs have been pushed.
 static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net_map, Instance inst)
@@ -418,10 +441,13 @@ static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net
 	SigSpec rd_data;
 	SigSpec rd_en;
 	std::vector<RTLIL::State> rd_clk_en;
+	std::vector<RTLIL::State> rd_clk_pol;
 	SigSpec wr_clk;
+	std::vector<RTLIL::State> wr_clk_pol;
 	SigSpec wr_addr;
 	SigSpec wr_data;
 	SigSpec wr_en;
+	Net clk_net;
 	for (Input port = first_port; ; ) {
 		Instance port_inst = get_input_parent(port);
 #define IN(N) get_src(net_map, get_input_net(port_inst, (N)))
@@ -430,19 +456,24 @@ static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net
 		case Id_Mem_Rd:
 			rd_clk_en.push_back(RTLIL::State::S0);
 			rd_clk.append(RTLIL::State::Sx);
+			rd_clk_pol.push_back(RTLIL::State::S1);
 			rd_addr.append(IN(1));
 			rd_data.append(OUT(1));
 			rd_en.append(Const(1, 1));
 			break;
 		case Id_Mem_Rd_Sync:
+			clk_net = get_input_net(port_inst, 2);
 			rd_clk_en.push_back(RTLIL::State::S1);
-			rd_clk.append(IN(2));
+			rd_clk_pol.push_back(extract_clk_pol(clk_net));
+			rd_clk.append(extract_clk_sig(net_map, clk_net));
 			rd_addr.append(IN(1));
 			rd_data.append(OUT(1));
 			rd_en.append(IN(3));
 			break;
 		case Id_Mem_Wr_Sync:
-			wr_clk.append(IN(2));
+			clk_net = get_input_net(port_inst, 2);
+			wr_clk_pol.push_back(extract_clk_pol(clk_net));
+			wr_clk.append(extract_clk_sig(net_map, clk_net));
 			wr_addr.append(IN(1));
 			wr_data.append(IN(4));
 			wr_en.append(SigSpec(SigBit(IN(3)), width));
@@ -460,8 +491,8 @@ static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net
 	}
 #undef IN
 #undef OUT
-	mem->parameters["\\RD_CLK_ENABLE"] = nbr_rd ? Const(rd_clk_en) : Const(0, 1);
-	mem->parameters["\\RD_CLK_POLARITY"] = Const(RTLIL::State::S1, nbr_rd ? nbr_rd : 1);
+	mem->parameters["\\RD_CLK_ENABLE"] = nbr_rd ? Const(rd_clk_en) : Const(RTLIL::State::S0);
+	mem->parameters["\\RD_CLK_POLARITY"] = nbr_rd ? Const(rd_clk_pol) : Const(RTLIL::State::S1);
 	mem->parameters["\\RD_TRANSPARENT"] = Const(RTLIL::State::S0, nbr_rd ? nbr_rd : 1);
 
 	mem->setPort("\\RD_CLK", rd_clk);
@@ -470,7 +501,7 @@ static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net
 	mem->setPort("\\RD_EN", rd_en);
 
 	mem->parameters["\\WR_CLK_ENABLE"] = Const(RTLIL::State::S1, nbr_wr ? nbr_wr : 1);
-	mem->parameters["\\WR_CLK_POLARITY"] = Const(RTLIL::State::S1, nbr_wr ? nbr_wr : 1);
+	mem->parameters["\\WR_CLK_POLARITY"] = nbr_wr ? Const(wr_clk_pol) : Const(RTLIL::State::S1);
 
 	mem->setPort("\\WR_CLK", wr_clk);
 	mem->setPort("\\WR_ADDR", wr_addr);
@@ -506,7 +537,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 
 	log("Importing module %s.\n", RTLIL::id2cstr(module->name));
 
-	//  TODO: support submodules
+	//  TODO: support submodules (currently they aren't generated)
 	if (is_valid(get_first_sub_module(m))) {
 		log_cmd_error("Unsupported: submodules in `%s'.\n", module_name.c_str());
 		return;
@@ -682,7 +713,8 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Concatn:
 			//  Skip: these won't create cells.
 			break;
-		case Id_Edge:
+		case Id_Posedge:
+		case Id_Negedge:
 			//  The cell is ignored.
 			break;
 		default:
@@ -838,25 +870,29 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			break;
 		case Id_Dff:
 		case Id_Idff:
-			module->addDff(to_str(iname), IN(0), IN(1), OUT(0));
-			//  For idff, the initial value is set on the output
-			//  wire.
-			if (id == Id_Idff) {
-				net_map[get_output(inst, 0).id]->attributes["\\init"] = IN(2).as_const();
+			{
+				Net clk = get_input_net(inst, 0);
+				module->addDff(to_str(iname), extract_clk_sig(net_map, clk), IN(1), OUT(0), extract_clk_pol(clk) == RTLIL::State::S1);
+				//  For idff, the initial value is set on the output wire.
+				if (id == Id_Idff) {
+					net_map[get_output(inst, 0).id]->attributes["\\init"] = IN(2).as_const();
+				}
 			}
 			break;
 		case Id_Adff:
 		case Id_Iadff:
 		        {
+				Net clk = get_input_net(inst, 0);
 				SigSpec rval = IN(3);
-				SigSpec clk = IN(0);
+				SigSpec clk_sig = extract_clk_sig(net_map, clk);
+				bool clk_pol = extract_clk_pol(clk) == RTLIL::State::S1;
 				SigSpec arst = IN(2);
 				SigSpec d = IN(1);
 				SigSpec q = OUT(0);
 
 				// If the reset value (rval) is a constant, use a classic asynchronous dff.
 				if (rval.is_fully_const())
-					module->addAdff(to_str(iname), clk, arst, d, q, rval.as_const());
+					module->addAdff(to_str(iname), clk_sig, arst, d, q, rval.as_const(), clk_pol);
 				else {
 					// Otherwise, use a dffsr.
 					// set <= arst ? d : 0
@@ -869,7 +905,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 					RTLIL::Wire *clr = module->addWire(NEW_ID, d.size());
 					module->addMux(NEW_ID, zero, d_n, arst, clr);
 					//  Use dffsr
-					module->addDffsr(to_str(iname), clk, set, clr, d, q);
+					module->addDffsr(to_str(iname), clk_sig, set, clr, d, q, clk_pol);
 				}
 				//  For iadff, the initial value is set on the output
 				//  wire.
@@ -987,7 +1023,8 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Concat3:
 		case Id_Concat4:
 		case Id_Concatn:
-		case Id_Edge:
+		case Id_Posedge:
+		case Id_Negedge:
 			break;
 #undef IN
 #undef OUT
