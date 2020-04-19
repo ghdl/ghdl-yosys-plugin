@@ -102,10 +102,10 @@ Docker image [`ghdl/synth:beta`](https://hub.docker.com/r/ghdl/synth/tags) inclu
 
 ```sh
 docker run --rm -t \
-  -v $(pwd):/src \
+  -v $(pwd)/examples/icestick/leds:/src \
   -w /src \
   ghdl/synth:beta \
-  yosys -m ghdl -p 'ghdl icestick/leds.vhdl icestick/blink.vhdl -e leds; synth_ice40 -blif leds.blif'
+  yosys -m ghdl -p 'ghdl leds.vhdl blink.vhdl -e leds; synth_ice40 -json leds.json'
 ```
 
 > In a system with [docker](https://docs.docker.com/install) installed, the image is automatically downloaded the first time invoked.
@@ -113,6 +113,8 @@ docker run --rm -t \
 Furthermore, the snippet above can be extended in order to P&R the design with [nextpnr](https://github.com/YosysHQ/nextpnr) and generate a bitstream with [icestorm](https://github.com/cliffordwolf/icestorm) tools:
 
 ```sh
+cd examples/icestick/leds/
+
 DOCKER_CMD="$(command -v winpty) docker run --rm -it -v /$(pwd)://wrk -w //wrk"
 
 $DOCKER_CMD ghdl/synth:beta     yosys -m ghdl -p 'ghdl leds.vhdl rotate4.vhdl -e leds; synth_ice40 -json leds.json'
