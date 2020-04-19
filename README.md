@@ -53,7 +53,7 @@ yosys-config --exec ln -s "$GHDL_PREFIX/lib/ghdl_yosys.so" --datdir/plugins/ghdl
 
 - Get [yosys](https://github.com/YosysHQ/yosys) sources.
 
-- Get ghdlsynth-beta and:
+- Get ghdl-yosys-plugin and:
   - Patch yosys sources using `yosys.diff`.
   - Copy `src/*` to `yosys/frontends/ghdl`.
   - Configure yosys by adding (to) `Makefile.conf`:
@@ -70,7 +70,7 @@ GHDL_DIR := <ghdl install dir>
 Example for icestick, using ghdl, yosys, nextpnr and icestorm:
 
 ```sh
-cd examples/icestick/
+cd examples/icestick/leds/
 
 # Analyse VHDL sources
 ghdl -a leds.vhdl
@@ -78,7 +78,7 @@ ghdl -a spin1.vhdl
 
 # Synthesize the design.
 # NOTE: if ghdl is built as a module, set MODULE to '-m ghdl' or '-m path/to/ghdl.so'
-yosys $MODULE -p 'ghdl leds; synth_ice40 --json leds.json'
+yosys $MODULE -p 'ghdl leds; synth_ice40 -json leds.json'
 
 # P&R
 nextpnr-ice40 --package hx1k --pcf leds.pcf --asc leds.asc --json leds.json
@@ -90,7 +90,11 @@ icepack leds.asc leds.bin
 iceprog leds.bin
 ```
 
-Alternatively, it is possible to analyze, elaborate and synthesize VHDL sources at once, instead of calling ghdl and yosys in two steps. In this example: `yosys $MODULE -p 'ghdl leds.vhdl spin1.vhdl -e leds; synth_ice40 --json leds.json`.
+Alternatively, it is possible to analyze, elaborate and synthesize VHDL sources at once, instead of calling ghdl and yosys in two steps. In this example:
+
+```
+yosys $MODULE -p 'ghdl leds.vhdl spin1.vhdl -e leds; synth_ice40 -json leds.json'
+```
 
 ## Docker
 
