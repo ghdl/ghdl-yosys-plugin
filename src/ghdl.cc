@@ -567,7 +567,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		}
 		Param_Idx nbr_params = get_nbr_params(m);
 		for (Param_Idx idx = 0; idx < nbr_params; idx++) {
-			module->avail_parameters.insert(to_str(get_param_name(m, idx)));
+			module->avail_parameters(to_str(get_param_name(m, idx)));
 		}
 
 		module->fixup_ports();
