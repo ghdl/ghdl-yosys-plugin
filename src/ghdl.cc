@@ -664,6 +664,8 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Anyseq:
 		case Id_Mem_Rd:
 		case Id_Mem_Rd_Sync:
+		case Id_Tri:
+		case Id_Resolver:
 		case Id_User_None:
 		case Id_User_Parameters:
 			for (Port_Idx idx = 0; idx < get_nbr_outputs(im); idx++) {
@@ -996,6 +998,13 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			break;
 		case Id_Anyseq:
 			add_formal_input(module, net_map, inst, "$anyseq");
+			break;
+		case Id_Tri:
+			module->addTribuf(to_str(iname), IN(1), IN(0), OUT(0));
+			break;
+		case Id_Resolver:
+			module->connect(OUT(0), IN(0));
+			module->connect(OUT(0), IN(1));
 			break;
 		case Id_Memory:
 		case Id_Memory_Init:
