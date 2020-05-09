@@ -626,6 +626,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Neg:
 		case Id_Mux2:
 		case Id_Mux4:
+		case Id_Pmux:
 		case Id_Dff:
 		case Id_Idff:
 		case Id_Adff:
@@ -870,6 +871,27 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Mux2:
 			module->addMux(to_str(iname), IN(1), IN(2), IN(0), OUT(0));
 			break;
+		case Id_Mux4:
+			{
+				SigSpec Sel0 = IN(0).extract(0, 1);
+				SigSpec Sel1 = IN(0).extract(1, 1);
+				SigSpec in1 = IN(1);
+				RTLIL::Wire *w0 = module->addWire(NEW_ID, in1.size());
+				RTLIL::Wire *w1 = module->addWire(NEW_ID, in1.size());
+				module->addMux(NEW_ID, in1, IN (2), Sel0, w0);
+				module->addMux(NEW_ID, IN (3), IN (4), Sel0, w1);
+				module->addMux(NEW_ID, w0, w1, Sel1, OUT (0));
+			}
+			break;
+		case Id_Pmux:
+		        {
+		            RTLIL::SigSpec b;
+			    RTLIL::SigSpec s = IN(0);
+			    for (unsigned i = s.size(); i > 0; i--)
+				    b.append(IN(2 + i - 1));
+			    module->addPmux(to_str(iname), IN(1), b, s, OUT(0));
+			}
+			break;
 		case Id_Dff:
 		case Id_Idff:
 			{
@@ -914,18 +936,6 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 				if (id == Id_Iadff) {
 					net_map[get_output(inst, 0).id]->attributes["\\init"] = IN(4).as_const();
 				}
-			}
-			break;
-		case Id_Mux4:
-			{
-				SigSpec Sel0 = IN(0).extract(0, 1);
-				SigSpec Sel1 = IN(0).extract(1, 1);
-				SigSpec in1 = IN(1);
-				RTLIL::Wire *w0 = module->addWire(NEW_ID, in1.size());
-				RTLIL::Wire *w1 = module->addWire(NEW_ID, in1.size());
-				module->addMux(NEW_ID, in1, IN (2), Sel0, w0);
-				module->addMux(NEW_ID, IN (3), IN (4), Sel0, w1);
-				module->addMux(NEW_ID, w0, w1, Sel1, OUT (0));
 			}
 			break;
 		case Id_User_None:
