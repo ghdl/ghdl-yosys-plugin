@@ -1,0 +1,16 @@
+[tasks]
+prove
+
+[options]
+depth 25
+prove: mode bmc
+
+[engines]
+prove: smtbmc z3
+
+[script]
+prove: ghdl --std=08 psl_test.vhdl -e psl_test
+prep -top psl_test
+
+[files]
+psl_test.vhdl
