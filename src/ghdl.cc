@@ -887,8 +887,8 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		        {
 		            RTLIL::SigSpec b;
 			    RTLIL::SigSpec s = IN(0);
-			    for (unsigned i = s.size(); i > 0; i--)
-				    b.append(IN(2 + i - 1));
+			    for (int i = 0; i < s.size(); i++)
+				    b.append(IN(2 + i));
 			    module->addPmux(to_str(iname), IN(1), b, s, OUT(0));
 			}
 			break;
