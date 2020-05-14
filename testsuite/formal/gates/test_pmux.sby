@@ -1,0 +1,12 @@
+[options]
+mode prove
+
+[engines]
+smtbmc z3
+
+[script]
+ghdl --std=08 test_pmux.vhd -e ent
+prep -top ent
+
+[files]
+test_pmux.vhd
