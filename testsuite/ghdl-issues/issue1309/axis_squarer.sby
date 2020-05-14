@@ -1,0 +1,34 @@
+[tasks]
+verify_bmc
+prove
+cover
+
+[options]
+verify_bmc: mode bmc
+verify_bmc: depth 40
+prove: mode prove
+prove: depth 20
+cover: mode cover
+cover: depth 40
+
+[engines]
+smtbmc z3 parallel.enable=true
+
+[script]
+ghdl axis_squarer.vhd -e axis_squarer
+read_verilog -formal faxis_master.v
+read_verilog -formal faxis_slave.v
+read_verilog -formal tb_formal_top.v
+--pycode-begin--
+cmd = "hierarchy -top tb_formal_top"
+if "cover" in tags:
+    cmd += " -chparam no_backpressure 1"
+output(cmd);
+--pycode-end--
+prep -top tb_formal_top
+
+[files]
+axis_squarer.vhd
+faxis_master.v
+faxis_slave.v
+tb_formal_top.v
