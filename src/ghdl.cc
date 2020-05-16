@@ -680,6 +680,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			}
 			break;
 		case Id_Inout:
+		case Id_Iinout:
 			//  The wire was created when the port was.
 			break;
 		case Id_Assert:
@@ -983,6 +984,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			module->connect(OUT (0), IN (0));
 			break;
 		case Id_Inout:
+		case Id_Iinout:
 			// Virtual gate.
 			// Connect input to output.
 			module->connect(OUT(0), IN(0));
