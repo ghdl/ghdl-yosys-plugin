@@ -370,8 +370,8 @@ void dump_sigspec(std::ostream &f, const RTLIL::SigSpec &sig)
 	}
 }
 
-void dump_attributes(std::ostream &f, std::string indent, dict<RTLIL::IdString, RTLIL::Const> &attributes, char term = '\n', bool modattr = false, bool regattr = false, bool as_comment = false)
-{ // PORTING REQUIRED
+void dump_attributes(std::ostream &f, std::string indent, dict<RTLIL::IdString, RTLIL::Const> &attributes, bool modattr = false, bool regattr = false, bool as_comment = false)
+{ // PORTING IN PROGRESS
 	if (noattr)
 		return;
 	if (attr2comment)
@@ -386,13 +386,13 @@ void dump_attributes(std::ostream &f, std::string indent, dict<RTLIL::IdString, 
 			f << stringf(" 1 ");
 		else
 			dump_const(f, it->second, -1, 0, false, as_comment);
-		f << stringf(" %s%c", as_comment ? "*/" : "*)", term);
+		f << stringf(" %s\n", as_comment ? "*/" : "*)");
 	}
 }
 
 void dump_wire(std::ostream &f, std::string indent, RTLIL::Wire *wire)
 { // PORTING REQUIRED
-	dump_attributes(f, indent, wire->attributes, '\n', /*modattr=*/false, /*regattr=*/reg_wires.count(wire->name));
+	dump_attributes(f, indent, wire->attributes, /*modattr=*/false, /*regattr=*/reg_wires.count(wire->name));
 #if 0
 	if (wire->port_input && !wire->port_output)
 		f << stringf("%s" "input %s", indent.c_str(), reg_wires.count(wire->name) ? "reg " : "");
@@ -1581,7 +1581,7 @@ void dump_proc_switch(std::ostream &f, std::string indent, RTLIL::SwitchRule *sw
 
 	bool got_default = false;
 	for (auto it = sw->cases.begin(); it != sw->cases.end(); ++it) {
-		dump_attributes(f, indent + "  ", (*it)->attributes, '\n', /*modattr=*/false, /*regattr=*/false, /*as_comment=*/true);
+		dump_attributes(f, indent + "  ", (*it)->attributes, /*modattr=*/false, /*regattr=*/false, /*as_comment=*/true);
 		if ((*it)->compare.size() == 0) {
 			if (got_default)
 				continue;
@@ -1744,7 +1744,7 @@ void dump_module(std::ostream &f, std::string indent, RTLIL::Module *module)
 		}
 	}
 
-	dump_attributes(f, indent, module->attributes, '\n', /*modattr=*/true);
+	dump_attributes(f, indent, module->attributes, /*modattr=*/true);
 	f << stringf("%s" "module %s(", indent.c_str(), id(module->name, false).c_str());
 	bool keep_running = true;
 	for (int port_id = 1; keep_running; port_id++) {
@@ -1875,7 +1875,7 @@ struct VHDLBackend : public Backend {
 		log("\n");
 	}
 	void execute(std::ostream *&f, std::string filename, std::vector<std::string> args, RTLIL::Design *design) YS_OVERRIDE
-	{ // PORTING REQUIRED
+	{ // PORTING TOP COMPLETE, SUBROUTINES IN PROGRESS
 		log_header(design, "Executing VHDL backend.\n");
 
 		verbose = false;
