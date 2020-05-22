@@ -43,7 +43,7 @@ dict<RTLIL::SigBit, RTLIL::State> active_initdata;
 SigMap active_sigmap;
 
 void reset_auto_counter_id(RTLIL::IdString id, bool may_rename)
-{
+{ // NO PORTING REQUIRED
 	const char *str = id.c_str();
 
 	if (*str == '$' && may_rename && !norename)
@@ -65,7 +65,7 @@ void reset_auto_counter_id(RTLIL::IdString id, bool may_rename)
 }
 
 void reset_auto_counter(RTLIL::Module *module)
-{
+{ // NO PORTING REQUIRED
 	auto_name_map.clear();
 	auto_name_counter = 0;
 	auto_name_offset = 0;
@@ -93,12 +93,12 @@ void reset_auto_counter(RTLIL::Module *module)
 }
 
 std::string next_auto_id()
-{
+{ // NO PORTING REQUIRED
 	return stringf("%s_%0*d_", auto_prefix.c_str(), auto_name_digits, auto_name_offset + auto_name_counter++);
 }
 
 std::string id(RTLIL::IdString internal_id, bool may_rename = true)
-{
+{ // PORTING REQUIRED
 	const char *str = internal_id.c_str();
 	bool do_escape = false;
 
@@ -158,7 +158,7 @@ std::string id(RTLIL::IdString internal_id, bool may_rename = true)
 }
 
 bool is_reg_wire(RTLIL::SigSpec sig, std::string &reg_name)
-{
+{ // PORTING REQUIRED
 	if (!sig.is_chunk() || sig.as_chunk().wire == NULL)
 		return false;
 
@@ -183,7 +183,7 @@ bool is_reg_wire(RTLIL::SigSpec sig, std::string &reg_name)
 }
 
 void dump_const(std::ostream &f, const RTLIL::Const &data, int width = -1, int offset = 0, bool no_decimal = false, bool escape_comment = false)
-{
+{ // PORTING REQUIRED
 	bool set_signed = (data.flags & RTLIL::CONST_FLAG_SIGNED) != 0;
 	if (width < 0)
 		width = data.bits.size() - offset;
@@ -307,7 +307,7 @@ void dump_const(std::ostream &f, const RTLIL::Const &data, int width = -1, int o
 }
 
 void dump_reg_init(std::ostream &f, SigSpec sig)
-{
+{ // PORTING REQUIRED
 	Const initval;
 	bool gotinit = false;
 
@@ -327,7 +327,7 @@ void dump_reg_init(std::ostream &f, SigSpec sig)
 }
 
 void dump_sigchunk(std::ostream &f, const RTLIL::SigChunk &chunk, bool no_decimal = false)
-{
+{ // PORTING REQUIRED
 	if (chunk.wire == NULL) {
 		dump_const(f, chunk.data, chunk.width, chunk.offset, no_decimal);
 	} else {
@@ -352,7 +352,7 @@ void dump_sigchunk(std::ostream &f, const RTLIL::SigChunk &chunk, bool no_decima
 }
 
 void dump_sigspec(std::ostream &f, const RTLIL::SigSpec &sig)
-{
+{ // PORTING REQUIRED
 	if (GetSize(sig) == 0) {
 		f << "\"\"";
 		return;
@@ -371,7 +371,7 @@ void dump_sigspec(std::ostream &f, const RTLIL::SigSpec &sig)
 }
 
 void dump_attributes(std::ostream &f, std::string indent, dict<RTLIL::IdString, RTLIL::Const> &attributes, char term = '\n', bool modattr = false, bool regattr = false, bool as_comment = false)
-{
+{ // PORTING REQUIRED
 	if (noattr)
 		return;
 	if (attr2comment)
@@ -391,7 +391,7 @@ void dump_attributes(std::ostream &f, std::string indent, dict<RTLIL::IdString, 
 }
 
 void dump_wire(std::ostream &f, std::string indent, RTLIL::Wire *wire)
-{
+{ // PORTING REQUIRED
 	dump_attributes(f, indent, wire->attributes, '\n', /*modattr=*/false, /*regattr=*/reg_wires.count(wire->name));
 #if 0
 	if (wire->port_input && !wire->port_output)
@@ -433,13 +433,13 @@ void dump_wire(std::ostream &f, std::string indent, RTLIL::Wire *wire)
 }
 
 void dump_memory(std::ostream &f, std::string indent, RTLIL::Memory *memory)
-{
+{ // PORTING REQUIRED
 	dump_attributes(f, indent, memory->attributes);
 	f << stringf("%s" "reg [%d:0] %s [%d:%d];\n", indent.c_str(), memory->width-1, id(memory->name).c_str(), memory->size+memory->start_offset-1, memory->start_offset);
 }
 
 void dump_cell_expr_port(std::ostream &f, RTLIL::Cell *cell, std::string port, bool gen_signed = true)
-{
+{ // PORTING REQUIRED
 	if (gen_signed && cell->parameters.count("\\" + port + "_SIGNED") > 0 && cell->parameters["\\" + port + "_SIGNED"].as_bool()) {
 		f << stringf("$signed(");
 		dump_sigspec(f, cell->getPort("\\" + port));
@@ -449,7 +449,7 @@ void dump_cell_expr_port(std::ostream &f, RTLIL::Cell *cell, std::string port, b
 }
 
 std::string cellname(RTLIL::Cell *cell)
-{
+{ // PORTING REQUIRED
 	if (!norename && cell->name[0] == '$' && reg_ct.count(cell->type) && cell->hasPort(ID::Q))
 	{
 		RTLIL::SigSpec sig = cell->getPort(ID::Q);
@@ -485,7 +485,7 @@ no_special_reg_name:
 }
 
 void dump_cell_expr_uniop(std::ostream &f, std::string indent, RTLIL::Cell *cell, std::string op)
-{
+{ // PORTING REQUIRED
 	f << stringf("%s" "assign ", indent.c_str());
 	dump_sigspec(f, cell->getPort(ID::Y));
 	f << stringf(" = %s ", op.c_str());
@@ -495,7 +495,7 @@ void dump_cell_expr_uniop(std::ostream &f, std::string indent, RTLIL::Cell *cell
 }
 
 void dump_cell_expr_binop(std::ostream &f, std::string indent, RTLIL::Cell *cell, std::string op)
-{
+{ // PORTING REQUIRED
 	f << stringf("%s" "assign ", indent.c_str());
 	dump_sigspec(f, cell->getPort(ID::Y));
 	f << stringf(" = ");
@@ -507,7 +507,7 @@ void dump_cell_expr_binop(std::ostream &f, std::string indent, RTLIL::Cell *cell
 }
 
 bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
-{
+{ // PORTING REQUIRED
 	if (cell->type == ID($_NOT_)) {
 		f << stringf("%s" "assign ", indent.c_str());
 		dump_sigspec(f, cell->getPort(ID::Y));
@@ -1445,7 +1445,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 }
 
 void dump_cell(std::ostream &f, std::string indent, RTLIL::Cell *cell)
-{
+{ // PORTING REQUIRED
 	if (cell->type[0] == '$' && !noexpr) {
 		if (dump_cell_expr(f, indent, cell))
 			return;
@@ -1524,7 +1524,7 @@ void dump_cell(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 }
 
 void dump_conn(std::ostream &f, std::string indent, const RTLIL::SigSpec &left, const RTLIL::SigSpec &right)
-{
+{ // PORTING REQUIRED
 	f << stringf("%s" "assign ", indent.c_str());
 	dump_sigspec(f, left);
 	f << stringf(" = ");
@@ -1532,10 +1532,11 @@ void dump_conn(std::ostream &f, std::string indent, const RTLIL::SigSpec &left, 
 	f << stringf(";\n");
 }
 
+// This is a forward declaration
 void dump_proc_switch(std::ostream &f, std::string indent, RTLIL::SwitchRule *sw);
 
 void dump_case_body(std::ostream &f, std::string indent, RTLIL::CaseRule *cs, bool omit_trailing_begin = false)
-{
+{ // PORTING REQUIRED
 	int number_of_stmts = cs->switches.size() + cs->actions.size();
 
 	if (!omit_trailing_begin && number_of_stmts >= 2)
@@ -1562,7 +1563,7 @@ void dump_case_body(std::ostream &f, std::string indent, RTLIL::CaseRule *cs, bo
 }
 
 void dump_proc_switch(std::ostream &f, std::string indent, RTLIL::SwitchRule *sw)
-{
+{ // PORTING REQUIRED
 	if (sw->signal.size() == 0) {
 		f << stringf("%s" "begin\n", indent.c_str());
 		for (auto it = sw->cases.begin(); it != sw->cases.end(); ++it) {
@@ -1602,7 +1603,7 @@ void dump_proc_switch(std::ostream &f, std::string indent, RTLIL::SwitchRule *sw
 }
 
 void case_body_find_regs(RTLIL::CaseRule *cs)
-{
+{ // NO PORTING REQUIRED
 	for (auto it = cs->switches.begin(); it != cs->switches.end(); ++it)
 	for (auto it2 = (*it)->cases.begin(); it2 != (*it)->cases.end(); it2++)
 		case_body_find_regs(*it2);
@@ -1615,7 +1616,7 @@ void case_body_find_regs(RTLIL::CaseRule *cs)
 }
 
 void dump_process(std::ostream &f, std::string indent, RTLIL::Process *proc, bool find_regs = false)
-{
+{ // PORTING REQUIRED
 	if (find_regs) {
 		case_body_find_regs(&proc->root_case);
 		for (auto it = proc->syncs.begin(); it != proc->syncs.end(); ++it)
@@ -1689,7 +1690,7 @@ void dump_process(std::ostream &f, std::string indent, RTLIL::Process *proc, boo
 }
 
 void dump_module(std::ostream &f, std::string indent, RTLIL::Module *module)
-{
+{ // PORTING REQUIRED
 	reg_wires.clear();
 	reset_auto_counter(module);
 	active_module = module;
@@ -1789,7 +1790,7 @@ struct VHDLBackend : public Backend {
 		log("\n");
 		log("    write_vhdl [options] [filename]\n");
 		log("\n");
-		log("Write the current design to a VHDL file (wip).\n");
+		log("Write the current design to a VHDL file (WIP).\n");
 		log("\n");
 		log("    -norename\n");
 		log("        without this option all internal object names (the ones with a dollar\n");
@@ -1864,7 +1865,7 @@ struct VHDLBackend : public Backend {
 		log("\n");
 	}
 	void execute(std::ostream *&f, std::string filename, std::vector<std::string> args, RTLIL::Design *design) YS_OVERRIDE
-	{
+	{ // PORTING REQUIRED
 		log_header(design, "Executing VHDL backend.\n");
 
 		verbose = false;
