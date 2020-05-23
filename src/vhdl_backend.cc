@@ -371,7 +371,7 @@ void dump_sigspec(std::ostream &f, const RTLIL::SigSpec &sig)
 }
 
 void dump_attributes(std::ostream &f, std::string indent, dict<RTLIL::IdString, RTLIL::Const> &attributes, bool modattr = false, bool regattr = false, bool as_comment = false)
-{ // PORTING IN PROGRESS
+{ // PORTING REQUIRED
 	if (noattr)
 		return;
 	if (attr2comment)
