@@ -32,7 +32,7 @@
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
 
-bool verbose, norename, noattr, attr2comment, noexpr, nodec, nohex, nostr, extmem, defparam, decimal, siminit;
+bool verbose, norename, noattr, attr2comment, noexpr, nodec, nohex, nostr, extmem, defparam, siminit;
 int auto_name_counter, auto_name_offset, auto_name_digits, extmem_counter;
 std::map<RTLIL::IdString, int> auto_name_map;
 std::set<RTLIL::IdString> reg_wires, reg_ct;
@@ -41,6 +41,15 @@ std::string auto_prefix, extmem_prefix;
 RTLIL::Module *active_module;
 dict<RTLIL::SigBit, RTLIL::State> active_initdata;
 SigMap active_sigmap;
+
+const char * const ctrl_char_array[]={"NUL", "SOH", "STX", "ETX",
+				"EOT", "ENQ", "ACK", "BEL",
+				"BS", "HT", "LF", "VT",
+				"FF", "CR", "SO", "SI",
+				"DLE", "DC1", "DC2", "DC3",
+				"DC4", "NAK", "SYN", "ETB",
+				"CAN", "EM", "SUB", "ESC",
+				"FSP", "GSP", "RSP", "USP"};
 
 void reset_auto_counter_id(RTLIL::IdString id, bool may_rename)
 { // NO PORTING REQUIRED
@@ -182,14 +191,17 @@ bool is_reg_wire(RTLIL::SigSpec sig, std::string &reg_name)
 	return true;
 }
 
-void dump_const(std::ostream &f, const RTLIL::Const &data, int width = -1, int offset = 0, bool no_decimal = false, bool escape_comment = false)
-{ // PORTING REQUIRED
+void dump_const(std::ostream &f, const RTLIL::Const &data, int width = -1, int offset = 0, bool no_decimal = false)
+{ // PORTING NEEDS TESTING
 	bool set_signed = (data.flags & RTLIL::CONST_FLAG_SIGNED) != 0;
+	/* TODO: verify correctness
+	 * width==0 is a null range, as defined by IEEE 1076-2008 5.2.1
+	 * width<0 is ?
+	 */
 	if (width < 0)
 		width = data.bits.size() - offset;
 	if (width == 0) {
-		// See IEEE 1364-2005 Clause 5.1.14.
-		f << "{0{1'b0}}";
+		f << "(others => '0')";
 		return;
 	}
 	if (nostr)
@@ -204,12 +216,10 @@ void dump_const(std::ostream &f, const RTLIL::Const &data, int width = -1, int o
 				if (data.bits[i] == State::S1)
 					val |= 1 << (i - offset);
 			}
-			if (decimal)
-				f << stringf("%d", val);
-			else if (set_signed && val < 0)
-				f << stringf("-32'sd%u", -val);
+			if (set_signed)
+				f << stringf("std_logic_vector(to_signed(%d,%d))", val, width);
 			else
-				f << stringf("32'%sd%u", set_signed ? "s" : "", val);
+				f << stringf("std_logic_vector(to_unsigned(%d,%d))", val, width);
 		} else {
 	dump_hex:
 			if (nohex)
@@ -222,7 +232,7 @@ void dump_const(std::ostream &f, const RTLIL::Const &data, int width = -1, int o
 				case State::S1: bin_digits.push_back('1'); break;
 				case RTLIL::Sx: bin_digits.push_back('x'); break;
 				case RTLIL::Sz: bin_digits.push_back('z'); break;
-				case RTLIL::Sa: bin_digits.push_back('?'); break;
+				case RTLIL::Sa: bin_digits.push_back('-'); break;
 				case RTLIL::Sm: log_error("Found marker state in final netlist.");
 				}
 			}
@@ -251,22 +261,24 @@ void dump_const(std::ostream &f, const RTLIL::Const &data, int width = -1, int o
 					hex_digits.push_back('z');
 					continue;
 				}
-				if (bit_3 == '?' || bit_2 == '?' || bit_1 == '?' || bit_0 == '?') {
-					if (bit_3 != '?' || bit_2 != '?' || bit_1 != '?' || bit_0 != '?')
+				if (bit_3 == '-' || bit_2 == '-' || bit_1 == '-' || bit_0 == '-') {
+					if (bit_3 != '-' || bit_2 != '-' || bit_1 != '-' || bit_0 != '-')
 						goto dump_bin;
-					hex_digits.push_back('?');
+					hex_digits.push_back('-');
 					continue;
 				}
 				int val = 8*(bit_3 - '0') + 4*(bit_2 - '0') + 2*(bit_1 - '0') + (bit_0 - '0');
 				hex_digits.push_back(val < 10 ? '0' + val : 'a' + val - 10);
 			}
-			f << stringf("%d'%sh", width, set_signed ? "s" : "");
+			// TODO: is this correct when the width is not a multiple of 4?
+			f << stringf("x\"");
 			for (int i = GetSize(hex_digits)-1; i >= 0; i--)
 				f << hex_digits[i];
+			f << stringf("\"");
 		}
 		if (0) {
 	dump_bin:
-			f << stringf("%d'%sb", width, set_signed ? "s" : "");
+			f << stringf("\"");
 			if (width == 0)
 				f << stringf("0");
 			for (int i = offset+width-1; i >= offset; i--) {
@@ -276,28 +288,32 @@ void dump_const(std::ostream &f, const RTLIL::Const &data, int width = -1, int o
 				case State::S1: f << stringf("1"); break;
 				case RTLIL::Sx: f << stringf("x"); break;
 				case RTLIL::Sz: f << stringf("z"); break;
-				case RTLIL::Sa: f << stringf("?"); break;
+				case RTLIL::Sa: f << stringf("-"); break;
 				case RTLIL::Sm: log_error("Found marker state in final netlist.");
 				}
 			}
+			f << stringf("\"");
 		}
 	} else {
 		if ((data.flags & RTLIL::CONST_FLAG_REAL) == 0)
 			f << stringf("\"");
 		std::string str = data.decode_string();
 		for (size_t i = 0; i < str.size(); i++) {
-			if (str[i] == '\n')
-				f << stringf("\\n");
-			else if (str[i] == '\t')
-				f << stringf("\\t");
-			else if (str[i] < 32)
-				f << stringf("\\%03o", str[i]);
+			unsigned char current_char_unsigned = (unsigned char) str[i];
+			/*
+			 * See the following IEEE 1076-2008 sections:
+			 * 15.7 "Character Set"
+			 * 15.9 "String Literals"
+			 * 16.3 "Package STANDARD"
+			 */
+			if (current_char_unsigned < 32)
+				f << stringf("\" & %s & \"",
+					ctrl_char_array[current_char_unsigned]);
+			else if (current_char_unsigned >= 128
+					&& current_char_unsigned <= 159)
+				f << stringf("\" & C%d & \"", current_char_unsigned);
 			else if (str[i] == '"')
-				f << stringf("\\\"");
-			else if (str[i] == '\\')
-				f << stringf("\\\\");
-			else if (str[i] == '/' && escape_comment && i > 0 && str[i-1] == '*')
-				f << stringf("\\/");
+				f << stringf("\"\"");
 			else
 				f << str[i];
 		}
@@ -385,7 +401,7 @@ void dump_attributes(std::ostream &f, std::string indent, dict<RTLIL::IdString, 
 		else if (modattr && (it->second == State::S1 || it->second == Const(1)))
 			f << stringf(" 1 ");
 		else
-			dump_const(f, it->second, -1, 0, false, as_comment);
+			dump_const(f, it->second, -1, 0, false);
 		f << stringf(" %s\n", as_comment ? "*/" : "*)");
 	}
 }
@@ -1363,8 +1379,8 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 			dump_sigspec(f, cell->getPort(ID::DST));
 		}
 
-		bool bak_decimal = decimal;
-		decimal = 1;
+		//bool bak_decimal = decimal;
+		//decimal = 1;
 
 		f << ") = (";
 		dump_const(f, cell->getParam(ID::T_RISE_MIN));
@@ -1380,7 +1396,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		dump_const(f, cell->getParam(ID::T_FALL_MAX));
 		f << ");\n";
 
-		decimal = bak_decimal;
+		//decimal = bak_decimal;
 
 		f << stringf("%s" "endspecify\n", indent.c_str());
 		return true;
@@ -1412,8 +1428,8 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 			dump_sigspec(f, cell->getPort(ID::DST_EN));
 		}
 
-		bool bak_decimal = decimal;
-		decimal = 1;
+		//bool bak_decimal = decimal;
+		//decimal = 1;
 
 		f << ", ";
 		dump_const(f, cell->getParam(ID::T_LIMIT_MIN));
@@ -1432,7 +1448,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		}
 
 		f << ");\n";
-		decimal = bak_decimal;
+		//decimal = bak_decimal;
 
 		f << stringf("%s" "endspecify\n", indent.c_str());
 		return true;
@@ -1829,9 +1845,6 @@ struct VHDLBackend : public Backend {
 		log("        not bit pattern. This option deactivates this feature and instead\n");
 		log("        will write out all constants in binary.\n");
 		log("\n");
-		log("    -decimal\n");
-		log("        dump 32-bit constants in decimal and without size and radix\n");
-		log("\n");
 		log("    -nohex\n");
 		log("        constant values that are compatible with hex output are usually\n");
 		log("        dumped as hex values. This option deactivates this feature and\n");
@@ -1888,7 +1901,6 @@ struct VHDLBackend : public Backend {
 		nostr = false;
 		extmem = false;
 		defparam = false;
-		decimal = false;
 		siminit = false;
 		auto_prefix = "";
 
@@ -1967,10 +1979,6 @@ struct VHDLBackend : public Backend {
 			}
 			if (arg == "-defparam") {
 				defparam = true;
-				continue;
-			}
-			if (arg == "-decimal") {
-				decimal = true;
 				continue;
 			}
 			if (arg == "-siminit") {
