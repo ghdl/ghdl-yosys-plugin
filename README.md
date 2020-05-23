@@ -13,7 +13,6 @@
 **This is experimental and work in progress!** See [ghdl.rtfd.io: Using/Synthesis](http://ghdl.readthedocs.io/en/latest/using/Synthesis.html).
 
 - [Build as a module (shared library)](#build-as-a-module-shared-library)
-- [Build as part of yosys (not recommended)](#build-as-part-of-yosys-not-recommended)
 - [Usage](#Usage)
 - [Docker](#Docker)
 
@@ -46,24 +45,6 @@ cp ghdl.so "$GHDL_PREFIX/lib/ghdl_yosys.so"
 yosys-config --exec mkdir -p --datdir/plugins
 yosys-config --exec ln -s "$GHDL_PREFIX/lib/ghdl_yosys.so" --datdir/plugins/ghdl.so
 ```
-
-## Build as part of yosys (not recommended)
-
-- Get and build ghdl as in the previous section.
-
-- Get [yosys](https://github.com/YosysHQ/yosys) sources.
-
-- Get ghdl-yosys-plugin and:
-  - Patch yosys sources using `yosys.diff`.
-  - Copy `src/*` to `yosys/frontends/ghdl`.
-  - Configure yosys by adding (to) `Makefile.conf`:
-
-```makefile
-ENABLE_GHDL := 1
-GHDL_DIR := <ghdl install dir>
-```
-
-- Build and install yosys.
 
 ## Usage
 
@@ -125,3 +106,21 @@ iceprog leds.bin
 ```
 
 > NOTE: on GNU/Linux, it should be possible to use `iceprog` through `ghdl/synth:icestorm`. On Windows and macOS, accessing USB/COM ports of the host from containers seems not to be supported yet. Therefore, `iceprog` is required to be available on the host.
+
+## Build as part of yosys (not recommended)
+
+- Get and build ghdl as in the previous section.
+
+- Get [yosys](https://github.com/YosysHQ/yosys) sources.
+
+- Get ghdl-yosys-plugin and:
+  - Patch yosys sources using `yosys.diff`.
+  - Copy `src/*` to `yosys/frontends/ghdl`.
+  - Configure yosys by adding (to) `Makefile.conf`:
+
+```makefile
+ENABLE_GHDL := 1
+GHDL_DIR := <ghdl install dir>
+```
+
+- Build and install yosys.

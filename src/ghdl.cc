@@ -323,6 +323,21 @@ static void set_src(std::vector<RTLIL::Wire *> &net_map, Net n, Wire *wire)
 	net_map[n.id] = wire;
 }
 
+//  Convert attributes of INST to OBJ.
+static void add_attributes (RTLIL::AttrObject &obj, Instance inst)
+{
+	Attribute attr = get_first_attribute (inst);
+
+	while (attr.id != 0) {
+		RTLIL::Const cst = pval_to_const(get_attribute_pval(attr));
+		IdString id = IdString('\\' + string(get_cstr(get_attribute_name(attr))));
+		if (get_attribute_type(attr) == Param_Pval_String)
+			cst.flags |= RTLIL::CONST_FLAG_STRING;
+		obj.attributes[id] = cst;
+		attr = get_attribute_next(attr);
+	}
+}
+
 //  Extract the polarity from net N (output of an edge gate).
 static RTLIL::State extract_clk_pol(Net n)
 {
@@ -434,6 +449,9 @@ static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net
 	mem->parameters["\\INIT"] = init_data;
 	mem->parameters["\\WR_PORTS"] = Const(nbr_wr);
 	mem->parameters["\\RD_PORTS"] = Const(nbr_rd);
+
+	//  Set attributes.
+	add_attributes(*mem, inst);
 
 	//  Connect.
 	SigSpec rd_clk;
@@ -862,7 +880,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			break;
 		case Id_Srem:
 		case Id_Smod:
-			// Yosys modulus usese Verilogs *remainder* behavior
+			// Yosys modulus uses Verilogs *remainder* behavior
 			// there is no signed modulus operator in Yosys
 			module->addMod(to_str(iname), IN(0), IN(1), OUT(0), true);
 			break;
