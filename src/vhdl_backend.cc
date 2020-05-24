@@ -408,19 +408,6 @@ void dump_attributes(std::ostream &f, std::string indent, dict<RTLIL::IdString, 
 void dump_wire(std::ostream &f, std::string indent, RTLIL::Wire *wire)
 { // PORTING REQUIRED
 	dump_attributes(f, indent, wire->attributes, /*modattr=*/false, /*regattr=*/reg_wires.count(wire->name));
-#if 0
-	if (wire->port_input && !wire->port_output)
-		f << stringf("%s" "input %s", indent.c_str(), reg_wires.count(wire->name) ? "reg " : "");
-	else if (!wire->port_input && wire->port_output)
-		f << stringf("%s" "output %s", indent.c_str(), reg_wires.count(wire->name) ? "reg " : "");
-	else if (wire->port_input && wire->port_output)
-		f << stringf("%s" "inout %s", indent.c_str(), reg_wires.count(wire->name) ? "reg " : "");
-	else
-		f << stringf("%s" "%s ", indent.c_str(), reg_wires.count(wire->name) ? "reg" : "wire");
-	if (wire->width != 1)
-		f << stringf("[%d:%d] ", wire->width - 1 + wire->start_offset, wire->start_offset);
-	f << stringf("%s;\n", id(wire->name).c_str());
-#else
 	// do not use Verilog-2k "output reg" syntax in Verilog export
 	std::string range = "";
 	if (wire->width != 1) {
@@ -444,7 +431,6 @@ void dump_wire(std::ostream &f, std::string indent, RTLIL::Wire *wire)
 		f << stringf(";\n");
 	} else if (!wire->port_input && !wire->port_output)
 		f << stringf("%s" "wire%s %s;\n", indent.c_str(), range.c_str(), id(wire->name).c_str());
-#endif
 }
 
 void dump_memory(std::ostream &f, std::string indent, RTLIL::Memory *memory)
