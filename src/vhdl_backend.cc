@@ -1541,10 +1541,10 @@ void dump_cell(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 }
 
 void dump_conn(std::ostream &f, std::string indent, const RTLIL::SigSpec &left, const RTLIL::SigSpec &right)
-{ // PORTING REQUIRED
-	f << stringf("%s" "assign ", indent.c_str());
+{ // PORTING NEEDS TESTING
+	f << stringf("%s", indent.c_str());
 	dump_sigspec(f, left);
-	f << stringf(" = ");
+	f << stringf(" <= ");
 	dump_sigspec(f, right);
 	f << stringf(";\n");
 }
