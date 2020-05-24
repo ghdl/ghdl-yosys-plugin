@@ -40,6 +40,7 @@ std::string auto_prefix, extmem_prefix;
 
 RTLIL::Module *active_module;
 dict<RTLIL::SigBit, RTLIL::State> active_initdata;
+std::unordered_set<unsigned int> memory_array_types;
 SigMap active_sigmap;
 
 const char * const ctrl_char_array[]={"NUL", "SOH", "STX", "ETX",
@@ -434,9 +435,24 @@ void dump_wire(std::ostream &f, std::string indent, RTLIL::Wire *wire)
 }
 
 void dump_memory(std::ostream &f, std::string indent, RTLIL::Memory *memory)
-{ // PORTING REQUIRED
+{ // PORTING NEEDS TESTING
+	size_t is_element_present = memory_array_types.count(memory->width);
+	std::string memory_type_name = stringf("array_type_%d",memory->width);
+	if (!is_element_present) {
+		memory_array_types.insert(memory->width);
+		f << stringf("%s"
+			"type %s is array (natural range <>) of std_logic_vector(%d downto 0)\n",
+			indent.c_str(), memory_type_name.c_str(), memory->width-1);
+	}
 	dump_attributes(f, indent, memory->attributes);
-	f << stringf("%s" "reg [%d:0] %s [%d:%d];\n", indent.c_str(), memory->width-1, id(memory->name).c_str(), memory->size+memory->start_offset-1, memory->start_offset);
+	// TODO: if memory->size is always positive then this is unnecessary
+	std::string range_str = stringf("(%d %s %d)",
+			memory->start_offset+memory->size-1,
+			memory->size>=0 ? "downto" : "to", memory->start_offset);
+	// TODO: memory initialization?
+	f << stringf("%s" "signal %s: %s %s;\n", indent.c_str(),
+		id(memory->name).c_str(), memory_type_name.c_str(),
+		range_str.c_str());
 }
 
 void dump_cell_expr_port(std::ostream &f, RTLIL::Cell *cell, std::string port, bool gen_signed = true)
@@ -1697,6 +1713,7 @@ void dump_module(std::ostream &f, std::string indent, RTLIL::Module *module)
 	active_module = module;
 	active_sigmap.set(module);
 	active_initdata.clear();
+	memory_array_types.clear();
 
 	for (auto wire : module->wires())
 		if (wire->attributes.count(ID::init)) {
