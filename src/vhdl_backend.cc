@@ -368,21 +368,20 @@ void dump_sigchunk(std::ostream &f, const RTLIL::SigChunk &chunk, bool no_decima
 }
 
 void dump_sigspec(std::ostream &f, const RTLIL::SigSpec &sig)
-{ // PORTING REQUIRED
+{ // PORTING NEEDS TESTING
 	if (GetSize(sig) == 0) {
+		// TODO this is a null range that may not be handled correctly
 		f << "\"\"";
 		return;
 	}
 	if (sig.is_chunk()) {
 		dump_sigchunk(f, sig.as_chunk());
 	} else {
-		f << stringf("{ ");
 		for (auto it = sig.chunks().rbegin(); it != sig.chunks().rend(); ++it) {
 			if (it != sig.chunks().rbegin())
-				f << stringf(", ");
+				f << stringf(" & ");
 			dump_sigchunk(f, *it, true);
 		}
-		f << stringf(" }");
 	}
 }
 
