@@ -515,20 +515,21 @@ no_special_reg_name:
 }
 
 void dump_cell_expr_uniop(std::ostream &f, std::string indent, RTLIL::Cell *cell, std::string op)
-{ // PORTING REQUIRED
-	f << stringf("%s" "assign ", indent.c_str());
+{ // PORTING NEEDS TESTING
+	f << stringf("%s", indent.c_str());
 	dump_sigspec(f, cell->getPort(ID::Y));
-	f << stringf(" = %s ", op.c_str());
+	f << stringf(" <= %s ", op.c_str());
 	dump_attributes(f, "", cell->attributes, ' ');
 	dump_cell_expr_port(f, cell, "A", true);
 	f << stringf(";\n");
 }
 
 void dump_cell_expr_binop(std::ostream &f, std::string indent, RTLIL::Cell *cell, std::string op)
-{ // PORTING REQUIRED
-	f << stringf("%s" "assign ", indent.c_str());
+{ // PORTING NEEDS TESTING
+	// TODO: typecasting for arithmetic operations
+	f << stringf("%s", indent.c_str());
 	dump_sigspec(f, cell->getPort(ID::Y));
-	f << stringf(" = ");
+	f << stringf(" <= ");
 	dump_cell_expr_port(f, cell, "A", true);
 	f << stringf(" %s ", op.c_str());
 	dump_attributes(f, "", cell->attributes, ' ');
