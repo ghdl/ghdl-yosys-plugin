@@ -469,9 +469,9 @@ void dump_memory(std::ostream &f, std::string indent, RTLIL::Memory *memory)
 }
 
 void dump_cell_expr_port(std::ostream &f, RTLIL::Cell *cell, std::string port, bool gen_signed = true)
-{ // PORTING REQUIRED
+{ // PORTING NEEDS TESTING
 	if (gen_signed && cell->parameters.count("\\" + port + "_SIGNED") > 0 && cell->parameters["\\" + port + "_SIGNED"].as_bool()) {
-		f << stringf("$signed(");
+		f << stringf("signed(");
 		dump_sigspec(f, cell->getPort("\\" + port));
 		f << stringf(")");
 	} else
