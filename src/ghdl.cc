@@ -663,6 +663,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Abs:
 		case Id_Red_Or:
 		case Id_Red_And:
+		case Id_Red_Xor:
 		case Id_Lsr:
 		case Id_Lsl:
 		case Id_Asr:
@@ -839,6 +840,9 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			break;
 		case Id_Red_And:
 			module->addReduceAnd(to_str(iname), IN(0), OUT(0));
+			break;
+		case Id_Red_Xor:
+			module->addReduceXor(to_str(iname), IN(0), OUT(0));
 			break;
 		case Id_Lsl:
 			module->addShl(to_str(iname), IN(0), IN(1), OUT(0));
