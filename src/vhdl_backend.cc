@@ -181,7 +181,7 @@ std::string id(RTLIL::IdString internal_id, bool may_rename = true)
 }
 
 bool is_reg_wire(RTLIL::SigSpec sig, std::string &reg_name)
-{ // PORTING REQUIRED
+{ // PORTING NEEDS TESTING
 	if (!sig.is_chunk() || sig.as_chunk().wire == NULL)
 		return false;
 
@@ -193,13 +193,16 @@ bool is_reg_wire(RTLIL::SigSpec sig, std::string &reg_name)
 	reg_name = id(chunk.wire->name);
 	if (sig.size() != chunk.wire->width) {
 		if (sig.size() == 1)
-			reg_name += stringf("[%d]", chunk.wire->start_offset +  chunk.offset);
+			reg_name += stringf("(%d)",
+				chunk.wire->start_offset + chunk.offset);
 		else if (chunk.wire->upto)
-			reg_name += stringf("[%d:%d]", (chunk.wire->width - (chunk.offset + chunk.width - 1) - 1) + chunk.wire->start_offset,
-					(chunk.wire->width - chunk.offset - 1) + chunk.wire->start_offset);
+			reg_name += stringf("(%d to %d)",
+				(chunk.wire->width - (chunk.offset + chunk.width - 1) - 1) + chunk.wire->start_offset,
+				(chunk.wire->width - chunk.offset - 1) + chunk.wire->start_offset);
 		else
-			reg_name += stringf("[%d:%d]", chunk.wire->start_offset +  chunk.offset + chunk.width - 1,
-					chunk.wire->start_offset +  chunk.offset);
+			reg_name += stringf("(%d downto %d)",
+				chunk.wire->start_offset + chunk.offset + chunk.width - 1,
+				chunk.wire->start_offset + chunk.offset);
 	}
 
 	return true;
