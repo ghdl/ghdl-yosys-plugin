@@ -354,7 +354,7 @@ void dump_reg_init(std::ostream &f, SigSpec sig)
 	}
 
 	if (gotinit) {
-		f << " = ";
+		f << " := ";
 		dump_const(f, initval);
 	}
 }
