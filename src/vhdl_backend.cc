@@ -423,15 +423,15 @@ void dump_attributes(std::ostream &f, std::string indent, dict<RTLIL::IdString, 
 }
 
 void dump_wire(std::ostream &f, std::string indent, RTLIL::Wire *wire)
-{ // PORTING REQUIRED
+{ // PORTING IN PROGRESS
 	dump_attributes(f, indent, wire->attributes, /*modattr=*/false, /*regattr=*/reg_wires.count(wire->name));
 	// do not use Verilog-2k "output reg" syntax in Verilog export
 	std::string range = "";
 	if (wire->width != 1) {
 		if (wire->upto)
-			range = stringf(" [%d:%d]", wire->start_offset, wire->width - 1 + wire->start_offset);
+			range = stringf(" (%d to %d)", wire->start_offset, wire->width - 1 + wire->start_offset);
 		else
-			range = stringf(" [%d:%d]", wire->width - 1 + wire->start_offset, wire->start_offset);
+			range = stringf(" (%d downto %d)", wire->width - 1 + wire->start_offset, wire->start_offset);
 	}
 	if (wire->port_input && !wire->port_output)
 		f << stringf("%s" "input%s %s;\n", indent.c_str(), range.c_str(), id(wire->name).c_str());
