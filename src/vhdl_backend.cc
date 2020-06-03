@@ -526,9 +526,16 @@ void dump_cell_expr_uniop(std::ostream &f, std::string indent, RTLIL::Cell *cell
 { // PORTING NEEDS TESTING
 	f << stringf("%s", indent.c_str());
 	dump_sigspec(f, cell->getPort(ID::Y));
-	f << stringf(" <= %s ", op.c_str());
+	f << stringf(" <= ");
+	if (is_arith_op) {
+		f << stringf("std_logic_vector(");
+	}
+	f << stringf(" %s ", op.c_str());
 	dump_attributes(f, "", cell->attributes, ' ');
 	dump_cell_expr_port(f, cell, "A", true, is_arith_op);
+	if (is_arith_op) {
+		f << stringf(")");
+	}
 	f << stringf(";\n");
 }
 
@@ -538,10 +545,16 @@ void dump_cell_expr_binop(std::ostream &f, std::string indent, RTLIL::Cell *cell
 	f << stringf("%s", indent.c_str());
 	dump_sigspec(f, cell->getPort(ID::Y));
 	f << stringf(" <= ");
+	if (is_arith_op) {
+		f << stringf("std_logic_vector(");
+	}
 	dump_cell_expr_port(f, cell, "A", true, is_arith_op);
 	f << stringf(" %s ", op.c_str());
 	dump_attributes(f, "", cell->attributes, ' ');
 	dump_cell_expr_port(f, cell, "B", true);
+	if (is_arith_op) {
+		f << stringf(")");
+	}
 	f << stringf(";\n");
 }
 
