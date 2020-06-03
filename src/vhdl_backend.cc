@@ -340,7 +340,7 @@ void dump_const(std::ostream &f, const RTLIL::Const &data, int width = -1, int o
 }
 
 void dump_reg_init(std::ostream &f, SigSpec sig)
-{ // PORTING REQUIRED
+{ // PORTING NEEDS TESTING
 	Const initval;
 	bool gotinit = false;
 
