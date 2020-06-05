@@ -474,16 +474,21 @@ void dump_memory(std::ostream &f, std::string indent, RTLIL::Memory *memory)
 
 void dump_cell_expr_port(std::ostream &f, RTLIL::Cell *cell, std::string port, bool gen_signed = true, bool gen_unsigned = false)
 { // PORTING NEEDS TESTING
-	if (gen_signed && cell->parameters.count("\\" + port + "_SIGNED") > 0 && cell->parameters["\\" + port + "_SIGNED"].as_bool()) {
+	SigSpec signal_spec = cell->getPort("\\" + port);
+	bool signal_is_const = signal_spec.is_fully_const();
+	if (gen_signed && !signal_is_const &&
+			cell->parameters.count("\\" + port + "_SIGNED") > 0 &&
+			cell->parameters["\\" + port + "_SIGNED"].as_bool()) {
+		// TODO check how signed arithmetic interacts with x"blah" constants
 		f << stringf("signed(");
-		dump_sigspec(f, cell->getPort("\\" + port));
+		dump_sigspec(f, signal_spec);
 		f << stringf(")");
-	} else if (gen_unsigned) {
+	} else if (gen_unsigned && !signal_is_const) {
 		f << stringf("unsigned(");
-		dump_sigspec(f, cell->getPort("\\" + port));
+		dump_sigspec(f, signal_spec);
 		f << stringf(")");
 	} else {
-		dump_sigspec(f, cell->getPort("\\" + port));
+		dump_sigspec(f, signal_spec);
 	}
 }
 
