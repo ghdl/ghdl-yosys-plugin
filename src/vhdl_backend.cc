@@ -497,7 +497,7 @@ void dump_cell_expr_port(std::ostream &f, RTLIL::Cell *cell, std::string port, b
 }
 
 std::string cellname(RTLIL::Cell *cell)
-{ // PORTING REQUIRED
+{ // PORTING NEEDS TESTING
 	if (!norename && cell->name[0] == '$' && reg_ct.count(cell->type) && cell->hasPort(ID::Q))
 	{
 		RTLIL::SigSpec sig = cell->getPort(ID::Q);
@@ -518,7 +518,7 @@ std::string cellname(RTLIL::Cell *cell)
 			cell_name = cell_name + "_reg";
 
 		if (wire->width != 1)
-			cell_name += stringf("[%d]", wire->start_offset + sig[0].offset);
+			cell_name += stringf("(%d)", wire->start_offset + sig[0].offset);
 
 		if (active_module && active_module->count_id(cell_name) > 0)
 				goto no_special_reg_name;
