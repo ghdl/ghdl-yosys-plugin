@@ -1869,7 +1869,7 @@ struct VHDLBackend : public Backend {
 		log("        format '_<number>_'.\n");
 		log("\n");
 		log("    -renameprefix <prefix>\n");
-		log("        insert this prefix in front of auto-generated instance names\n");
+		log("        insert this prefix in front of auto-generated instance names, instead of the default \"n\"\n");
 		log("\n");
 		log("    -noattr\n");
 		log("        with this option no attributes are included in the output\n");
@@ -1947,7 +1947,7 @@ struct VHDLBackend : public Backend {
 		extmem = false;
 		defparam = false;
 		siminit = false;
-		auto_prefix = "";
+		auto_prefix = "n";
 
 		bool blackboxes = false;
 		bool selected = false;
@@ -2050,6 +2050,9 @@ struct VHDLBackend : public Backend {
 			if (filename == "<stdout>")
 				log_cmd_error("Option -extmem must be used with a filename.\n");
 			extmem_prefix = filename.substr(0, filename.rfind('.'));
+		}
+		if (auto_prefix.length() == 0) {
+			log_cmd_error("Prefix specified by -renameprefix must not be empty.\n");
 		}
 
 		design->sort();
