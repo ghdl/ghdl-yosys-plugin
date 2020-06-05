@@ -18,6 +18,7 @@ jobs:
     - uses: actions/checkout@v1
     - run: ./ci.sh
     - name: Trigger 'synth' in ghdl/docker
+      if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
       run: |
         curl -X POST https://api.github.com/repos/ghdl/docker/dispatches \
         -H "Content-Type: application/json" \
