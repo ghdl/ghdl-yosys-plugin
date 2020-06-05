@@ -1937,6 +1937,9 @@ struct VHDLBackend : public Backend {
 		log("processes to logic networks and registers. A warning is generated when\n");
 		log("this command is called on a design with RTLIL processes.\n");
 		log("\n");
+		log("RTLIL does not distinguish between a vector of length 1 and a nonvector.\n");
+		log("This may cause pre-synth/post-synth mismatches when a port\n");
+		log("is a vector of length 1.\n");
 	}
 	void execute(std::ostream *&f, std::string filename, std::vector<std::string> args, RTLIL::Design *design) YS_OVERRIDE
 	{ // PORTING TOP COMPLETE, SUBROUTINES IN PROGRESS
