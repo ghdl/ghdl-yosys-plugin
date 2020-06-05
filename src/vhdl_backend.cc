@@ -538,7 +538,7 @@ void dump_cell_expr_uniop(std::ostream &f, std::string indent, RTLIL::Cell *cell
 	}
 	f << stringf(" %s ", op.c_str());
 	dump_attributes(f, "", cell->attributes, ' ');
-	dump_cell_expr_port(f, cell, "A", true, is_arith_op);
+	dump_cell_expr_port(f, cell, "A", is_arith_op, is_arith_op);
 	if (is_arith_op) {
 		f << stringf(")");
 	}
@@ -554,10 +554,10 @@ void dump_cell_expr_binop(std::ostream &f, std::string indent, RTLIL::Cell *cell
 	if (is_arith_op) {
 		f << stringf("std_logic_vector(");
 	}
-	dump_cell_expr_port(f, cell, "A", true, is_arith_op);
+	dump_cell_expr_port(f, cell, "A", is_arith_op, is_arith_op);
 	f << stringf(" %s ", op.c_str());
 	dump_attributes(f, "", cell->attributes, ' ');
-	dump_cell_expr_port(f, cell, "B", true);
+	dump_cell_expr_port(f, cell, "B", is_arith_op, is_arith_op);
 	if (is_arith_op) {
 		f << stringf(")");
 	}
