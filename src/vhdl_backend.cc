@@ -254,7 +254,7 @@ void dump_const(std::ostream &f, const RTLIL::Const &data, int width = -1, int o
 				case RTLIL::Sm: log_error("Found marker state in final netlist.");
 				}
 			}
-			if (GetSize(bin_digits) == 0)
+			if (GetSize(bin_digits) <= 1)
 				goto dump_bin;
 			while (GetSize(bin_digits) % 4 != 0)
 				if (bin_digits.back() == '1')
@@ -296,9 +296,11 @@ void dump_const(std::ostream &f, const RTLIL::Const &data, int width = -1, int o
 		}
 		if (0) {
 	dump_bin:
-			f << stringf("\"");
-			if (width == 0)
-				f << stringf("0");
+			if (width > 1) {
+				f << stringf("\"");
+			} else {
+				f << stringf("'");
+			}
 			for (int i = offset+width-1; i >= offset; i--) {
 				log_assert(i < (int)data.bits.size());
 				switch (data.bits[i]) {
@@ -310,7 +312,11 @@ void dump_const(std::ostream &f, const RTLIL::Const &data, int width = -1, int o
 				case RTLIL::Sm: log_error("Found marker state in final netlist.");
 				}
 			}
-			f << stringf("\"");
+			if (width > 1) {
+				f << stringf("\"");
+			} else {
+				f << stringf("'");
+			}
 		}
 	} else {
 		if ((data.flags & RTLIL::CONST_FLAG_REAL) == 0)
