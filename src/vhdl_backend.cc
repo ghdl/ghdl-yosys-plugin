@@ -430,31 +430,29 @@ void dump_attributes(std::ostream &f, std::string indent, dict<RTLIL::IdString, 
 }
 
 void dump_wire(std::ostream &f, std::string indent, RTLIL::Wire *wire)
-{ // PORTING IN PROGRESS
+{ // PORTING NEEDS TESTING
+	// Ports are dumped earlier in entity declaration, so ignore them here
 	dump_attributes(f, indent, wire->attributes, /*modattr=*/false, /*regattr=*/reg_wires.count(wire->name));
-	// do not use Verilog-2k "output reg" syntax in Verilog export
-	std::string range = "";
+	std::string typestr = "";
 	if (wire->width != 1) {
 		if (wire->upto)
-			range = stringf(" (%d to %d)", wire->start_offset, wire->width - 1 + wire->start_offset);
+			typestr = stringf("STD_LOGIC_VECTOR (%d to %d)", wire->start_offset,
+				wire->width - 1 + wire->start_offset);
 		else
-			range = stringf(" (%d downto %d)", wire->width - 1 + wire->start_offset, wire->start_offset);
+			typestr = stringf("STD_LOGIC_VECTOR (%d downto %d)",
+				wire->width - 1 + wire->start_offset, wire->start_offset);
+	} else {
+		typestr = stringf("STD_LOGIC");
 	}
-	if (wire->port_input && !wire->port_output)
-		f << stringf("%s" "input%s %s;\n", indent.c_str(), range.c_str(), id(wire->name).c_str());
-	if (!wire->port_input && wire->port_output)
-		f << stringf("%s" "output%s %s;\n", indent.c_str(), range.c_str(), id(wire->name).c_str());
-	if (wire->port_input && wire->port_output)
-		f << stringf("%s" "inout%s %s;\n", indent.c_str(), range.c_str(), id(wire->name).c_str());
-	if (reg_wires.count(wire->name)) {
-		f << stringf("%s" "reg%s %s", indent.c_str(), range.c_str(), id(wire->name).c_str());
-		if (wire->attributes.count(ID::init)) {
-			f << stringf(" = ");
+	if (!wire->port_input && !wire->port_output) {
+		f << stringf("%s" "signal %s: %s", indent.c_str(),
+			id(wire->name).c_str(), typestr.c_str());
+		if (reg_wires.count(wire->name) && wire->attributes.count(ID::init)) {
+			f << stringf(" := ");
 			dump_const(f, wire->attributes.at(ID::init));
 		}
 		f << stringf(";\n");
-	} else if (!wire->port_input && !wire->port_output)
-		f << stringf("%s" "wire%s %s;\n", indent.c_str(), range.c_str(), id(wire->name).c_str());
+	}
 }
 
 void dump_memory(std::ostream &f, std::string indent, RTLIL::Memory *memory)
@@ -572,6 +570,7 @@ void dump_cell_expr_binop(std::ostream &f, std::string indent, RTLIL::Cell *cell
 
 bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 { // PORTING IN PROGRESS
+	f << stringf("-- Cell type is %s\n", cell->type.c_str());
 	if (cell->type == ID($_NOT_)) {
 		f << stringf("%s", indent.c_str());
 		dump_sigspec(f, cell->getPort(ID::Y));
@@ -1773,6 +1772,7 @@ void dump_module(std::ostream &f, std::string indent, RTLIL::Module *module)
 					active_initdata[sig[i]] = val[i];
 		}
 
+	// TODO: remove if unnecessary
 	if (!module->processes.empty())
 		log_warning("Module %s contains unmapped RTLIL processes. RTLIL processes\n"
 				"can't always be mapped directly to Verilog always blocks. Unintended\n"
@@ -1781,6 +1781,7 @@ void dump_module(std::ostream &f, std::string indent, RTLIL::Module *module)
 
 	f << stringf("\n");
 	for (auto it = module->processes.begin(); it != module->processes.end(); ++it)
+		// This just updates internal data structures
 		dump_process(f, indent + "  ", it->second, true);
 
 	if (!noexpr)
@@ -1811,29 +1812,68 @@ void dump_module(std::ostream &f, std::string indent, RTLIL::Module *module)
 		}
 	}
 
-	dump_attributes(f, indent, module->attributes, /*modattr=*/true);
-	f << stringf("%s" "module %s(", indent.c_str(), id(module->name, false).c_str());
-	bool keep_running = true;
-	for (int port_id = 1; keep_running; port_id++) {
-		keep_running = false;
-		for (auto wire : module->wires()) {
-			if (wire->port_id == port_id) {
-				if (port_id != 1)
-					f << stringf(", ");
-				f << stringf("%s", id(wire->name).c_str());
-				keep_running = true;
-				continue;
-			}
+	// Entity declaration
+	// Find ports first before dumping them
+	std::map<int, Wire*> port_wires;
+	// TODO: validate assumption that port_id is port iff it is positive
+	for (auto wire : module->wires()) {
+		if (wire->port_id > 0) {
+			port_wires.insert({wire->port_id, wire});
 		}
 	}
-	f << stringf(");\n");
+	dump_attributes(f, indent, module->attributes, /*modattr=*/true);
+	f << stringf("%s" "entity %s is\n", indent.c_str(),
+		id(module->name, false).c_str());
+	f << stringf("%s" "  port (\n", indent.c_str());
+	for (auto wire_it = port_wires.cbegin();
+			wire_it != port_wires.cend(); wire_it++) {
+		Wire* wire = wire_it->second;
+		f << stringf("%s" "    %s :",
+			indent.c_str(), id(wire->name).c_str());
+		// TODO: Verilog inout = VHDL inout?
+		if (wire->port_input && wire->port_output) {
+			f << stringf(" inout ");
+		} else if (wire->port_input && !wire->port_output) {
+			f << stringf(" in ");
+		} else if (!wire->port_input && wire->port_output) {
+			f << stringf(" out ");
+		} else {
+			log_error("Port %s is neither an input nor an output\n",
+				id(wire->name).c_str());
+		}
+		if (wire->width > 1) {
+			// TODO: verify arithmetic
+			if (wire->upto) {
+				f << stringf("std_logic_vector (%d to %d)",
+					wire->start_offset, wire->start_offset+wire->width-1);
+			} else {
+				f << stringf("std_logic_vector (%d downto %d)",
+					wire->start_offset+wire->width-1, wire->start_offset);
+			}
+		} else {
+			f << stringf("std_logic");
+		}
+		auto wire_it_next = std::next(wire_it);
+		if (wire_it_next != port_wires.cend()) {
+			f << stringf(";");
+		} else {
+			f << stringf(");");
+		}
+		f << stringf("\n");
+	}
+	//f << stringf("%s" "  );\n", indent.c_str());
+	f << stringf("%s" "end %s;\n",
+		indent.c_str(), id(module->name, false).c_str());
 
+	// Architecture
+	f << stringf("%s" "architecture rtl of %s is\n", indent.c_str(),
+		id(module->name, false).c_str());
 	for (auto w : module->wires())
 		dump_wire(f, indent + "  ", w);
 
 	for (auto it = module->memories.begin(); it != module->memories.end(); ++it)
 		dump_memory(f, indent + "  ", it->second);
-
+	f << stringf("%s" "begin\n", indent.c_str());
 	for (auto cell : module->cells())
 		dump_cell(f, indent + "  ", cell);
 
@@ -1843,7 +1883,7 @@ void dump_module(std::ostream &f, std::string indent, RTLIL::Module *module)
 	for (auto it = module->connections().begin(); it != module->connections().end(); ++it)
 		dump_conn(f, indent + "  ", it->first, it->second);
 
-	f << stringf("%s" "endmodule\n", indent.c_str());
+	f << stringf("%s" "end rtl;\n", indent.c_str());
 	active_module = NULL;
 	active_sigmap.clear();
 	active_initdata.clear();
