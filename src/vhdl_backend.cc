@@ -75,7 +75,7 @@ void reset_auto_counter_id(RTLIL::IdString id, bool may_rename)
 }
 
 void reset_auto_counter(RTLIL::Module *module)
-{ // NO PORTING REQUIRED
+{ // PORTING NEEDS TESTING
 	auto_name_map.clear();
 	auto_name_counter = 0;
 	auto_name_offset = 0;
@@ -99,21 +99,22 @@ void reset_auto_counter(RTLIL::Module *module)
 
 	if (verbose)
 		for (auto it = auto_name_map.begin(); it != auto_name_map.end(); ++it)
-			log("  renaming `%s' to `%s_%0*d_'.\n", it->first.c_str(), auto_prefix.c_str(), auto_name_digits, auto_name_offset + it->second);
+			log("  renaming `%s' to `%s%0*d'.\n", it->first.c_str(), auto_prefix.c_str(), auto_name_digits, auto_name_offset + it->second);
 }
 
 std::string next_auto_id()
-{ // NO PORTING REQUIRED
-	return stringf("%s_%0*d_", auto_prefix.c_str(), auto_name_digits, auto_name_offset + auto_name_counter++);
+{ // PORTING NEEDS TESTING
+	return stringf("%s%0*d", auto_prefix.c_str(),
+		auto_name_digits, auto_name_offset + auto_name_counter++);
 }
 
 std::string id(RTLIL::IdString internal_id, bool may_rename = true)
-{ // PORTING IN PROGRESS
+{ // PORTING NEEDS TESTING
 	const char *str = internal_id.c_str();
 	bool do_escape = false;
 
 	if (may_rename && auto_name_map.count(internal_id) != 0)
-		return stringf("%s_%0*d_", auto_prefix.c_str(), auto_name_digits, auto_name_offset + auto_name_map[internal_id]);
+		return stringf("%s%0*d", auto_prefix.c_str(), auto_name_digits, auto_name_offset + auto_name_map[internal_id]);
 
 	if (*str == '\\')
 		str++;
