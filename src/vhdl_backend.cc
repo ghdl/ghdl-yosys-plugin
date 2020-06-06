@@ -52,6 +52,30 @@ const char * const ctrl_char_array[]={"NUL", "SOH", "STX", "ETX",
 				"CAN", "EM", "SUB", "ESC",
 				"FSP", "GSP", "RSP", "USP"};
 
+std::set<RTLIL::SigChunk> get_sensitivity_set(RTLIL::SigSpec sigspec)
+{
+	std::set<RTLIL::SigChunk> wire_chunks;
+	for (RTLIL::SigChunk chunk: sigspec.chunks()) {
+		// Copied from const checks in SigChunk
+		// TODO: call pack()?
+		if (chunk.width > 0 && chunk.wire != NULL) {
+			wire_chunks.emplace(chunk);
+		}
+	}
+	return wire_chunks;
+}
+
+std::set<RTLIL::SigChunk> get_sensitivity_set(std::set<RTLIL::SigSpec> sigspecs)
+{
+	std::set<RTLIL::SigChunk> wire_chunks;
+	for (RTLIL::SigSpec sigspec: sigspecs) {
+		std::set<RTLIL::SigChunk> wires_in_chunk;
+		wires_in_chunk = get_sensitivity_set(sigspec);
+		wire_chunks.insert(wires_in_chunk.begin(), wires_in_chunk.end());
+	}
+	return wire_chunks;
+}
+
 void reset_auto_counter_id(RTLIL::IdString id, bool may_rename)
 { // NO PORTING REQUIRED
 	const char *str = id.c_str();
