@@ -1841,7 +1841,7 @@ void dump_module(std::ostream &f, std::string indent, RTLIL::Module *module)
 	std::map<int, Wire*> port_wires;
 	// TODO: validate assumption that port_id is port iff it is positive
 	for (auto wire : module->wires()) {
-		if (wire->port_id > 0) {
+		if (wire->port_input || wire->port_output) {
 			port_wires.insert({wire->port_id, wire});
 		}
 	}
@@ -1862,6 +1862,7 @@ void dump_module(std::ostream &f, std::string indent, RTLIL::Module *module)
 		} else if (!wire->port_input && wire->port_output) {
 			f << stringf(" out ");
 		} else {
+			// Should never execute
 			log_error("Port %s is neither an input nor an output\n",
 				id(wire->name).c_str());
 		}
