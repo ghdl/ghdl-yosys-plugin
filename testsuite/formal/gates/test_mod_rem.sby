@@ -1,0 +1,13 @@
+[options]
+mode prove
+depth 3
+
+[engines]
+smtbmc z3
+
+[script]
+ghdl --std=08 test_mod_rem.vhd -e ent
+prep -top ent
+
+[files]
+test_mod_rem.vhd

@@ -17,3 +17,11 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - run: ./ci.sh
+    - name: Trigger 'synth' in ghdl/docker
+      if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+      run: |
+        curl -X POST https://api.github.com/repos/ghdl/docker/dispatches \
+        -H "Content-Type: application/json" \
+        -H 'Accept: application/vnd.github.everest-preview+json' \
+        -H "Authorization: token ${{ secrets.GHDL_BOT }}" \
+        --data '{"event_type": "synth"}'
