@@ -211,6 +211,8 @@ std::string id(RTLIL::IdString internal_id, bool may_rename = true)
 	// array_type_(width) is used by the memory dump pass
 	if (strncmp(str,"array_type_",strlen("array_type_"))==0)
 		do_escape = true;
+	if (strncmp(str,"ivar_",strlen("ivar_"))==0)
+		do_escape = true;
 
 	if (do_escape)
 		// VHDL extended identifier
