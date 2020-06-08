@@ -718,13 +718,13 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		// [7] != _ is asynchronous reset
 		dump_attributes(f, indent, cell->attributes);
 		f << stringf("%s" "process(", indent.c_str());
+		// TODO: implicit assumptions of width 1
 		dump_sigspec(f, cell->getPort(ID::C));
 		if (cell->type[7] != '_') {
 			f << stringf(", ");
 			dump_sigspec(f, cell->getPort(ID::R));
 		}
 		f << stringf(") is\n");
-		// TODO: implicit assumption of width 1
 		// TODO: get rid of intermediate variable?
 		if (!out_is_reg_wire) {
 			f << stringf("%s" "  variable %s: STD_LOGIC ", indent.c_str(), reg_name.c_str());
@@ -777,13 +777,13 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		// Sensitivity list
 		dump_attributes(f, indent, cell->attributes);
 		f << stringf("%s" "process(", indent.c_str());
+		// TODO: implicit assumption of width 1
 		dump_sigspec(f, cell->getPort(ID::C));
 		f << stringf(", ");
 		dump_sigspec(f, cell->getPort(ID::R));
 		f << stringf(", ");
 		dump_sigspec(f, cell->getPort(ID::S));
 		f << stringf(") is\n");
-		// TODO: implicit assumption of width 1
 		// TODO: get rid of intermediate variable?
 		if (!out_is_reg_wire) {
 			f << stringf("%s" "  variable %s: STD_LOGIC ", indent.c_str(), reg_name.c_str());
@@ -1215,6 +1215,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		std::string assignment_operator = out_is_reg_wire ? "<=" : ":=";
 
 		f << stringf("%s" "process (", indent.c_str());
+		// Implicit assumption that clock and reset sigs are 1 wide
 		dump_sigspec(f, sig_clk);
 		if (cell->type == ID($adff)) {
 			f << stringf(", ");
