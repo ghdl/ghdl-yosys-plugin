@@ -577,7 +577,7 @@ void dump_cell_expr_uniop(std::ostream &f, std::string indent, RTLIL::Cell *cell
 	if (is_arith_op) {
 		f << stringf("std_logic_vector(");
 	}
-	f << stringf(" %s ", op.c_str());
+	f << stringf("%s ", op.c_str());
 	dump_attributes(f, "", cell->attributes, ' ');
 	dump_cell_expr_port(f, cell, "A", is_arith_op, is_arith_op);
 	if (is_arith_op) {
