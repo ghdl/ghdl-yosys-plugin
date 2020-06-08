@@ -1041,7 +1041,11 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		/*
 		 * Use a case statement in a process instead of with..select
 		 * This makes it easier to handle SigSpecs with multiple chunks
-		 * This is a deliberate break from the output of ghdl --synth 
+		 * This is a deliberate break from the output of ghdl --synth
+		 *
+		 * TODO: could use (a, b) := c & d; instead, if this is valid VHDL-93
+		 * This would require informing the concatenation generators
+		 * about whether the expression is an LHS or RHS expression
 		 */
 		// y=pmux(a, b, s) is selected b subset when $onehot(s) else a when s = (others -> '0') else ERROR
 		/* with s select y <=
@@ -1075,11 +1079,10 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		std::string a_var_str, b_var_str, s_var_str, y_var_str;
 		std::string cellname_prefix = cellname(cell);
 		cellname_prefix = cellname_prefix.substr(1, cellname_prefix.length()-2);
-		log("Cellname prefix of $pmux is %s\n",cellname_prefix.c_str());
-		a_var_str = "var_"+cellname_prefix+"_a";
-		b_var_str = "var_"+cellname_prefix+"_b";
-		s_var_str = "var_"+cellname_prefix+"_s";
-		y_var_str = "var_"+cellname_prefix+"_y";
+		a_var_str = "ivar_"+cellname_prefix+"_a";
+		b_var_str = "ivar_"+cellname_prefix+"_b";
+		s_var_str = "ivar_"+cellname_prefix+"_s";
+		y_var_str = "ivar_"+cellname_prefix+"_y";
 
 		std::set<RTLIL::SigChunk> sensitivities =
 			get_sensitivity_set({cell->getPort(ID::A),
@@ -1114,11 +1117,16 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 			s_var_str.c_str(), s_str.c_str());
 		f << stringf("%s" "  case %s is\n", indent.c_str(),
 			s_var_str.c_str());
+		char case_comparisons[s_width+1];
+		case_comparisons[s_width] = '\0';
 		// onehot selection cases...
 		for (int i = 0; i < s_width; i++) {
+			for (int j = 0; j < s_width; j++) {
+				case_comparisons[j] = j==i ? '1' : '0';
+			}
 			f << stringf("%s"
-				"    when (%d => '1', others => '0') =>\n",
-				indent.c_str(), i);
+				"    when \"%s\" =>\n",
+				indent.c_str(), case_comparisons);
 			f << stringf("%s"
 				"      %s := %s(%d downto %d);\n",
 				indent.c_str(),
@@ -1126,8 +1134,11 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 				(i+1)*width-1, i*width);
 		}
 		// ...and defaults
-		f << stringf("%s" "    when (others => '0') =>\n",
-			indent.c_str());
+		for (int j = 0; j < s_width; j++) {
+				case_comparisons[j] = '0';
+		}
+		f << stringf("%s" "    when \"%s\" =>\n",
+			indent.c_str(), case_comparisons);
 		f << stringf("%s" "      %s := %s;\n",
 			indent.c_str(),
 			y_var_str.c_str(), a_var_str.c_str());
@@ -1135,6 +1146,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 			indent.c_str());
 		f << stringf("%s" "      %s := (others => 'X');\n",
 			indent.c_str(), y_var_str.c_str());
+
 		f << stringf("%s" "  end case;\n", indent.c_str());
 		f << stringf("%s" "  %s <= %s;\n", indent.c_str(),
 			y_str.c_str(), y_var_str.c_str());
