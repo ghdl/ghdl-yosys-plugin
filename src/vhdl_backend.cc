@@ -1037,48 +1037,108 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 	}
 
 	if (cell->type == ID($pmux))
-	{ // unported for now
+	{
+		/*
+		 * Use a case statement in a process instead of with..select
+		 * This makes it easier to handle SigSpecs with multiple chunks
+		 * This is a deliberate break from the output of ghdl --synth 
+		 */
+		// y=pmux(a, b, s) is selected b subset when $onehot(s) else a when s = (others -> '0') else ERROR
+		/* with s select y <=
+		b_pieces when (num => '1', others => '0')
+		a when (others => '0')
+		(others => 'X') when others
+		 */
+		// TODO: this may break with non-singular SigSpecs
+		/*
+		 * TODO: remove assumption of downto
+		 * (This assumption is also present in Verilog backend)?
+		 */
 		int width = cell->parameters[ID::WIDTH].as_int();
 		int s_width = cell->getPort(ID::S).size();
-		std::string func_name = cellname(cell);
 
-		f << stringf("%s" "function [%d:0] %s;\n", indent.c_str(), width-1, func_name.c_str());
-		f << stringf("%s" "  input [%d:0] a;\n", indent.c_str(), width-1);
-		f << stringf("%s" "  input [%d:0] b;\n", indent.c_str(), s_width*width-1);
-		f << stringf("%s" "  input [%d:0] s;\n", indent.c_str(), s_width-1);
+		std::ostringstream a_str_stream;
+		std::ostringstream b_str_stream;
+		std::ostringstream s_str_stream;
+		std::ostringstream y_str_stream;
+		dump_sigspec(a_str_stream, cell->getPort(ID::A));
+		dump_sigspec(b_str_stream, cell->getPort(ID::B));
+		dump_sigspec(s_str_stream, cell->getPort(ID::S));
+		dump_sigspec(y_str_stream, cell->getPort(ID::Y));
+		std::string a_str, b_str, s_str, y_str;
+		a_str = a_str_stream.str();
+		b_str = b_str_stream.str();
+		s_str = s_str_stream.str();
+		y_str = y_str_stream.str();
 
-		dump_attributes(f, indent + "  ", cell->attributes);
-		if (!noattr)
-			f << stringf("%s" "  (* parallel_case *)\n", indent.c_str());
-		f << stringf("%s" "  casez (s)", indent.c_str());
-		f << stringf(noattr ? " // synopsys parallel_case\n" : "\n");
+		// TODO: small chance of a collision with another identifier
+		std::string a_var_str, b_var_str, s_var_str, y_var_str;
+		std::string cellname_prefix = cellname(cell);
+		cellname_prefix = cellname_prefix.substr(1, cellname_prefix.length()-2);
+		log("Cellname prefix of $pmux is %s\n",cellname_prefix.c_str());
+		a_var_str = "var_"+cellname_prefix+"_a";
+		b_var_str = "var_"+cellname_prefix+"_b";
+		s_var_str = "var_"+cellname_prefix+"_s";
+		y_var_str = "var_"+cellname_prefix+"_y";
 
-		for (int i = 0; i < s_width; i++)
-		{
-			f << stringf("%s" "    %d'b", indent.c_str(), s_width);
-
-			for (int j = s_width-1; j >= 0; j--)
-				f << stringf("%c", j == i ? '1' : '?');
-
-			f << stringf(":\n");
-			f << stringf("%s" "      %s = b[%d:%d];\n", indent.c_str(), func_name.c_str(), (i+1)*width-1, i*width);
+		std::set<RTLIL::SigChunk> sensitivities =
+			get_sensitivity_set({cell->getPort(ID::A),
+				cell->getPort(ID::B),
+				cell->getPort(ID::S)});
+		f << stringf("%s" "process(", indent.c_str());
+		bool is_first_sensitivity_chunk = true;
+		for (RTLIL::SigChunk chunk: sensitivities) {
+			if (!is_first_sensitivity_chunk) {
+				f << ", ";
+			}
+			dump_sigchunk(f, chunk);
+			is_first_sensitivity_chunk = false;
 		}
-
-		f << stringf("%s" "    default:\n", indent.c_str());
-		f << stringf("%s" "      %s = a;\n", indent.c_str(), func_name.c_str());
-
-		f << stringf("%s" "  endcase\n", indent.c_str());
-		f << stringf("%s" "endfunction\n", indent.c_str());
-
-		f << stringf("%s" "assign ", indent.c_str());
-		dump_sigspec(f, cell->getPort(ID::Y));
-		f << stringf(" = %s(", func_name.c_str());
-		dump_sigspec(f, cell->getPort(ID::A));
-		f << stringf(", ");
-		dump_sigspec(f, cell->getPort(ID::B));
-		f << stringf(", ");
-		dump_sigspec(f, cell->getPort(ID::S));
-		f << stringf(");\n");
+		f << stringf(") is\n");
+		f << stringf("%s" "  variable %s: std_logic_vector(%d downto 0);\n",
+			indent.c_str(), a_var_str.c_str(), width-1);
+		f << stringf("%s" "  variable %s: std_logic_vector(%d downto 0);\n",
+			indent.c_str(), b_var_str.c_str(), s_width*width-1);
+		f << stringf("%s" "  variable %s: std_logic_vector(%d downto 0);\n",
+			indent.c_str(), s_var_str.c_str(), s_width-1);
+		f << stringf("%s" "  variable %s: std_logic_vector(%d downto 0);\n",
+			indent.c_str(), y_var_str.c_str(), width-1);
+		f << stringf("%s" "begin\n", indent.c_str());
+		// TODO: see if any of the case functions can do this
+		// Use intermediate variables to handle multichunk SigSpecs
+		f << stringf("%s" "  %s := %s;\n", indent.c_str(),
+			a_var_str.c_str(), a_str.c_str());
+		f << stringf("%s" "  %s := %s;\n", indent.c_str(),
+			b_var_str.c_str(), b_str.c_str());
+		f << stringf("%s" "  %s := %s;\n", indent.c_str(),
+			s_var_str.c_str(), s_str.c_str());
+		f << stringf("%s" "  case %s is\n", indent.c_str(),
+			s_var_str.c_str());
+		// onehot selection cases...
+		for (int i = 0; i < s_width; i++) {
+			f << stringf("%s"
+				"    when (%d => '1', others => '0') =>\n",
+				indent.c_str(), i);
+			f << stringf("%s"
+				"      %s := %s(%d downto %d);\n",
+				indent.c_str(),
+				y_var_str.c_str(), b_var_str.c_str(),
+				(i+1)*width-1, i*width);
+		}
+		// ...and defaults
+		f << stringf("%s" "    when (others => '0') =>\n",
+			indent.c_str());
+		f << stringf("%s" "      %s := %s;\n",
+			indent.c_str(),
+			y_var_str.c_str(), a_var_str.c_str());
+		f << stringf("%s" "    when others =>\n",
+			indent.c_str());
+		f << stringf("%s" "      %s := (others => 'X');\n",
+			indent.c_str(), y_var_str.c_str());
+		f << stringf("%s" "  end case;\n", indent.c_str());
+		f << stringf("%s" "  %s <= %s;\n", indent.c_str(),
+			y_str.c_str(), y_var_str.c_str());
+		f << stringf("%s" "end process;\n", indent.c_str());
 		return true;
 	}
 
