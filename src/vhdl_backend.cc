@@ -859,14 +859,14 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 	HANDLE_BINOP(ID($sshl), "<<<", true)
 	HANDLE_BINOP(ID($sshr), ">>>", true)
 
-	// TODO: check if we want to replicate $eq vs $eqx in VHDL
-	// TODO: port these
+	// TODO: port $eqx and $nex ("=" and "/=" return BIT, not STD_LOGIC)
+	// TODO: use "?<" instead of "<" (and analogous) for others?
 	HANDLE_BINOP(ID($lt),  "<",  true)
 	HANDLE_BINOP(ID($le),  "<=", true)
-	HANDLE_BINOP(ID($eq),  "=", false)
-	HANDLE_BINOP(ID($ne),  "!=", true)
+	HANDLE_BINOP(ID($eq),  "?=", false)
+	HANDLE_BINOP(ID($ne),  "?/=", false)
 	HANDLE_BINOP(ID($eqx), "=", false)
-	HANDLE_BINOP(ID($nex), "!=", true)
+	HANDLE_BINOP(ID($nex), "/=", false)
 	HANDLE_BINOP(ID($ge),  ">=", true)
 	HANDLE_BINOP(ID($gt),  ">",  true)
 
