@@ -1877,19 +1877,20 @@ void case_body_find_regs(RTLIL::CaseRule *cs)
 	}
 }
 
-void dump_process(std::ostream &f, std::string indent, RTLIL::Process *proc, bool find_regs = false)
-{ // PORTING REQUIRED
-	if (find_regs) {
-		case_body_find_regs(&proc->root_case);
-		for (auto it = proc->syncs.begin(); it != proc->syncs.end(); ++it)
+void find_process_regs(RTLIL::Process *proc)
+{
+	case_body_find_regs(&proc->root_case);
+	for (auto it = proc->syncs.begin(); it != proc->syncs.end(); ++it) {
 		for (auto it2 = (*it)->actions.begin(); it2 != (*it)->actions.end(); it2++) {
 			for (auto &c : it2->first.chunks())
 				if (c.wire != NULL)
 					reg_wires.insert(c.wire->name);
 		}
-		return;
 	}
-
+	return;
+}
+void dump_process(std::ostream &f, std::string indent, RTLIL::Process *proc)
+{ // PORTING REQUIRED
 	f << stringf("%s" "always @* begin\n", indent.c_str());
 	dump_case_body(f, indent, &proc->root_case, true);
 
@@ -1979,7 +1980,7 @@ void dump_module(std::ostream &f, std::string indent, RTLIL::Module *module)
 	f << stringf("\n");
 	for (auto it = module->processes.begin(); it != module->processes.end(); ++it)
 		// This just updates internal data structures
-		dump_process(f, indent + "  ", it->second, true);
+		find_process_regs(it->second);
 
 	if (!noexpr)
 	{
