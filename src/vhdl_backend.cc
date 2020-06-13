@@ -582,7 +582,6 @@ void dump_cell_expr_uniop(std::ostream &f, std::string indent, RTLIL::Cell *cell
 
 void dump_cell_expr_binop(std::ostream &f, std::string indent, RTLIL::Cell *cell, std::string op, bool is_arith_op = false)
 { // PORTING NEEDS TESTING
-	// TODO: typecasting for arithmetic operations
 	f << stringf("%s", indent.c_str());
 	dump_sigspec(f, cell->getPort(ID::Y));
 	f << stringf(" <= ");
@@ -827,7 +826,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 	if (cell->type ==_type) { dump_cell_expr_binop(f, indent, cell, _operator, _is_arith); return true; }
 
 	// UNIOP/BINOP symbols partly ported
-	// TODO: casts to unsigned/signed as appropriate
+	// TODO: verify casts to unsigned/signed
 	HANDLE_UNIOP(ID($not), "not", false)
 	HANDLE_UNIOP(ID($pos), "+",   true)
 	HANDLE_UNIOP(ID($neg), "-",   true)
@@ -1048,17 +1047,10 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		 * This makes it easier to handle SigSpecs with multiple chunks
 		 * This is a deliberate break from the output of ghdl --synth
 		 *
-		 * TODO: could use (a, b) := c & d; instead, if this is valid VHDL-93
+		 * Could use (a, b) := c & d; instead, if this is valid VHDL-93
 		 * This would require informing the concatenation generators
 		 * about whether the expression is an LHS or RHS expression
 		 */
-		// y=pmux(a, b, s) is selected b subset when $onehot(s) else a when s = (others -> '0') else ERROR
-		/* with s select y <=
-		b_pieces when (num => '1', others => '0')
-		a when (others => '0')
-		(others => 'X') when others
-		 */
-		// TODO: this may break with non-singular SigSpecs
 		/*
 		 * TODO: remove assumption of downto
 		 * (This assumption is also present in Verilog backend)?
@@ -1080,7 +1072,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		s_str = s_str_stream.str();
 		y_str = y_str_stream.str();
 
-		// TODO: small chance of a collision with another identifier
+		// ivar_ names are escaped above, so there shouldn't be collisions
 		std::string a_var_str, b_var_str, s_var_str, y_var_str;
 		std::string cellname_prefix = cellname(cell);
 		cellname_prefix = cellname_prefix.substr(1, cellname_prefix.length()-2);
@@ -1694,11 +1686,12 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 	if (cell->type.in(ID($specify2), ID($specify3), ID($specrule)))
 	{
 		/*
-		 * TODO: There are a number of more graceful ways to handle this:
+		 * There are a number of more graceful ways to handle this:
 		 * - Dump this as a subcomponent
 		 * - Leave a more informative comment behind in the generated VHDL
 		 * - Use the information from the src attribute to augment the above
 		 * Suggestions are welcome if you actually need $specify* cells dumped
+		 * (Yosys has limited support for these anyway so this should be fine)
 		 */
 		log_warning("%s cell %s detected\n", cell->type.c_str(), cell->name.c_str());
 		log_warning("$specify* cells are not supported by the VHDL backend and will be ignored\n");
@@ -2019,7 +2012,6 @@ void dump_module(std::ostream &f, std::string indent, RTLIL::Module *module)
 	// Entity declaration
 	// Find ports first before dumping them
 	std::map<int, Wire*> port_wires;
-	// TODO: validate assumption that port_id is port iff it is positive
 	for (auto wire : module->wires()) {
 		if (wire->port_input || wire->port_output) {
 			port_wires.insert({wire->port_id, wire});
