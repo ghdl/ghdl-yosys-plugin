@@ -65,18 +65,6 @@ std::set<RTLIL::SigChunk> get_sensitivity_set(RTLIL::SigSpec sigspec)
 	return wire_chunks;
 }
 
-std::set<RTLIL::SigChunk> get_sensitivity_set(std::set<RTLIL::SigSpec> sigspecs)
-{
-	std::set<RTLIL::SigChunk> wire_chunks;
-	for (RTLIL::SigSpec sigspec: sigspecs) {
-		std::set<RTLIL::SigChunk> wires_in_chunk;
-		wires_in_chunk = get_sensitivity_set(sigspec);
-		wire_chunks.insert(wires_in_chunk.begin(), wires_in_chunk.end());
-	}
-	return wire_chunks;
-}
-
-// Acknowledging code repetition here (remove set input version?)
 std::set<RTLIL::SigChunk>
 get_sensitivity_set(std::initializer_list<RTLIL::SigSpec> sigspecs)
 {
