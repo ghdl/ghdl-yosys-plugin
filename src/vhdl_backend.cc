@@ -838,8 +838,8 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 	// UNIOP/BINOP symbols partly ported
 	// TODO: casts to unsigned/signed as appropriate
 	HANDLE_UNIOP(ID($not), "not", false)
-	HANDLE_UNIOP(ID($pos), "+",   true) // unported
-	HANDLE_UNIOP(ID($neg), "-",   true) // unported
+	HANDLE_UNIOP(ID($pos), "+",   true)
+	HANDLE_UNIOP(ID($neg), "-",   true)
 
 	HANDLE_BINOP(ID($and),  "and",  false)
 	HANDLE_BINOP(ID($or),   "or",   false)
@@ -878,7 +878,18 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 	HANDLE_BINOP(ID($mod), "mod", true)
 	HANDLE_BINOP(ID($pow), "**",  true) // unported
 
-	HANDLE_UNIOP(ID($logic_not), "not", false)
+	if (cell->type == ID($logic_not)) {
+		// TODO: use VHDL-93 compliant syntax
+		// TODO: attributes were on port "A"
+		f << stringf("%s", indent.c_str());
+		dump_sigspec(f, cell->getPort(ID::Y));
+		f << stringf(" <= ");
+		f << stringf("not (or ");
+		//dump_attributes(f, "", cell->attributes, ' ');
+		dump_cell_expr_port(f, cell, "A", false, false);
+		f << stringf(");\n");
+		return true;
+	}
 	HANDLE_BINOP(ID($logic_and), "and", false)
 	HANDLE_BINOP(ID($logic_or),  "or",  false)
 
