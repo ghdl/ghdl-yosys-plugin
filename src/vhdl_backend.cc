@@ -287,8 +287,8 @@ void dump_const(std::ostream &f, const RTLIL::Const &data, int width = -1, int o
 				switch (data.bits[i]) {
 				case State::S0: bin_digits.push_back('0'); break;
 				case State::S1: bin_digits.push_back('1'); break;
-				case RTLIL::Sx: bin_digits.push_back('x'); break;
-				case RTLIL::Sz: bin_digits.push_back('z'); break;
+				case RTLIL::Sx: bin_digits.push_back('X'); break;
+				case RTLIL::Sz: bin_digits.push_back('Z'); break;
 				case RTLIL::Sa: bin_digits.push_back('-'); break;
 				case RTLIL::Sm: log_error("Found marker state in final netlist.");
 				}
@@ -306,16 +306,16 @@ void dump_const(std::ostream &f, const RTLIL::Const &data, int width = -1, int o
 				char bit_2 = bin_digits[i+2];
 				char bit_1 = bin_digits[i+1];
 				char bit_0 = bin_digits[i+0];
-				if (bit_3 == 'x' || bit_2 == 'x' || bit_1 == 'x' || bit_0 == 'x') {
-					if (bit_3 != 'x' || bit_2 != 'x' || bit_1 != 'x' || bit_0 != 'x')
+				if (bit_3 == 'X' || bit_2 == 'X' || bit_1 == 'X' || bit_0 == 'X') {
+					if (bit_3 != 'X' || bit_2 != 'X' || bit_1 != 'X' || bit_0 != 'X')
 						goto dump_bin;
-					hex_digits.push_back('x');
+					hex_digits.push_back('X');
 					continue;
 				}
-				if (bit_3 == 'z' || bit_2 == 'z' || bit_1 == 'z' || bit_0 == 'z') {
-					if (bit_3 != 'z' || bit_2 != 'z' || bit_1 != 'z' || bit_0 != 'z')
+				if (bit_3 == 'Z' || bit_2 == 'Z' || bit_1 == 'Z' || bit_0 == 'Z') {
+					if (bit_3 != 'Z' || bit_2 != 'Z' || bit_1 != 'Z' || bit_0 != 'Z')
 						goto dump_bin;
-					hex_digits.push_back('z');
+					hex_digits.push_back('Z');
 					continue;
 				}
 				if (bit_3 == '-' || bit_2 == '-' || bit_1 == '-' || bit_0 == '-') {
@@ -345,8 +345,8 @@ void dump_const(std::ostream &f, const RTLIL::Const &data, int width = -1, int o
 				switch (data.bits[i]) {
 				case State::S0: f << stringf("0"); break;
 				case State::S1: f << stringf("1"); break;
-				case RTLIL::Sx: f << stringf("x"); break;
-				case RTLIL::Sz: f << stringf("z"); break;
+				case RTLIL::Sx: f << stringf("X"); break;
+				case RTLIL::Sz: f << stringf("Z"); break;
 				case RTLIL::Sa: f << stringf("-"); break;
 				case RTLIL::Sm: log_error("Found marker state in final netlist.");
 				}
