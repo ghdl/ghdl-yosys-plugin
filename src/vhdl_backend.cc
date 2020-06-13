@@ -480,6 +480,9 @@ void dump_wire(std::ostream &f, std::string indent, RTLIL::Wire *wire)
 			dump_const(f, wire->attributes.at(ID::init));
 		}
 		f << stringf(";\n");
+	} else {
+		log_error("Internal error: attempted to dump_wire a port \"%s\"\n",
+			wire->name.c_str());
 	}
 }
 
