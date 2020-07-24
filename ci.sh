@@ -45,7 +45,7 @@ gend
 
 gstart "[Build] ghdl/synth:formal" "$ANSI_MAGENTA"
 docker build -t ghdl/synth:formal --build-arg IMAGE='ghdl/synth:beta' . -f- <<-EOF
-$(curl -fsSL https://github.com/ghdl/docker/raw/master/dockerfiles/synth_formal)
+$(curl -fsSL https://github.com/ghdl/docker/raw/master/synth_formal.dockerfile)
 EOF
 gend "formal"
 
