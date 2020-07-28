@@ -2099,7 +2099,7 @@ void write_header_imports(std::ostream &f, std::string indent)
 
 struct VHDLBackend : public Backend {
 	VHDLBackend() : Backend("vhdl", "write design to VHDL file") { }
-	void help() YS_OVERRIDE
+	void help() override
 	{
 		//   |---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|
 		log("\n");
@@ -2179,7 +2179,7 @@ struct VHDLBackend : public Backend {
 		log("This may cause pre-synth/post-synth mismatches when a port\n");
 		log("is a vector of length 1.\n");
 	}
-	void execute(std::ostream *&f, std::string filename, std::vector<std::string> args, RTLIL::Design *design) YS_OVERRIDE
+	void execute(std::ostream *&f, std::string filename, std::vector<std::string> args, RTLIL::Design *design) override
 	{ // PORTING TOP COMPLETE, SUBROUTINES IN PROGRESS
 		log_header(design, "Executing VHDL backend.\n");
 
