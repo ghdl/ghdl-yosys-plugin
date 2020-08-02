@@ -45,6 +45,7 @@ dict<RTLIL::SigBit, RTLIL::State> active_initdata;
 std::unordered_set<unsigned int> memory_array_types;
 SigMap active_sigmap;
 
+// ASCII control character mapping
 const char * const ctrl_char_array[]={"NUL", "SOH", "STX", "ETX",
 				"EOT", "ENQ", "ACK", "BEL",
 				"BS", "HT", "LF", "VT",
@@ -1134,13 +1135,14 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		}
 		// ...and defaults
 		for (int j = 0; j < s_width; j++) {
-				case_comparisons[j] = '0';
+			case_comparisons[j] = '0';
 		}
 		f << stringf("%s" "    when \"%s\" =>\n",
 			indent.c_str(), case_comparisons);
 		f << stringf("%s" "      %s := %s;\n",
 			indent.c_str(),
 			y_var_str.c_str(), a_var_str.c_str());
+		// Undefined behavior when not all '0' or onehot
 		f << stringf("%s" "    when others =>\n",
 			indent.c_str());
 		f << stringf("%s" "      %s := (others => 'X');\n",
@@ -2297,6 +2299,6 @@ struct VHDLBackend : public Backend {
 		auto_name_map.clear();
 		reg_wires.clear();
 	}
-} VerilogBackend;
+} VHDLBackend;
 
 PRIVATE_NAMESPACE_END
