@@ -24,6 +24,8 @@
 #include "kernel/celltypes.h"
 #include "kernel/log.h"
 #include "kernel/sigtools.h"
+#include "kernel/ff.h"
+
 #include <string>
 #include <sstream>
 #include <set>
@@ -35,7 +37,7 @@ PRIVATE_NAMESPACE_BEGIN
 bool verbose, norename, noattr, attr2comment, noexpr, nodec, nohex, nostr, extmem, defparam, siminit;
 int auto_name_counter, auto_name_offset, auto_name_digits, extmem_counter;
 std::map<RTLIL::IdString, int> auto_name_map;
-std::set<RTLIL::IdString> reg_wires, reg_ct;
+std::set<RTLIL::IdString> reg_wires;
 std::string auto_prefix, extmem_prefix;
 
 RTLIL::Module *active_module;
@@ -529,7 +531,7 @@ void dump_cell_expr_port(std::ostream &f, RTLIL::Cell *cell, std::string port, b
 
 std::string cellname(RTLIL::Cell *cell)
 { // PORTING NEEDS TESTING
-	if (!norename && cell->name[0] == '$' && reg_ct.count(cell->type) && cell->hasPort(ID::Q))
+	if (!norename && cell->name[0] == '$' && RTLIL::builtin_ff_cell_types().count(cell->type) && cell->hasPort(ID::Q) && !cell->type.in(ID($ff), ID($_FF_)))
 	{
 		RTLIL::SigSpec sig = cell->getPort(ID::Q);
 		if (GetSize(sig) != 1 || sig.is_fully_const())
@@ -699,7 +701,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		return true;
 	}
 
-	if (cell->type.begins_with("$_DFF_"))
+	/*if (cell->type.begins_with("$_DFF_"))
 	{
 		std::string reg_name = cellname(cell);
 		bool out_is_reg_wire = is_reg_wire(cell->getPort(ID::Q), reg_name);
@@ -818,7 +820,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		}
 
 		return true;
-	}
+	}*/
 
 #define HANDLE_UNIOP(_type, _operator, _is_arith) \
 	if (cell->type ==_type) { dump_cell_expr_uniop(f, indent, cell, _operator, _is_arith); return true; }
@@ -1204,6 +1206,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		return true;
 	}
 
+	// Trash the below and reimport/copy new FfData stuff in
 	if (cell->type == ID($dffsr))
 	{ // porting in progress
 		SigSpec sig_clk = cell->getPort(ID::CLK);
@@ -1700,8 +1703,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		return true;
 	}
 
-	// FIXME: $_SR_[PN][PN]_, $_DLATCH_[PN]_, $_DLATCHSR_[PN][PN][PN]_
-	// FIXME: $sr, $dlatch, $memrd, $memwr, $fsm
+	// FIXME: $memrd, $memwr, $fsm
 
 	return false;
 }
@@ -1774,7 +1776,7 @@ void dump_cell(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		}
 	}
 
-	if (siminit && reg_ct.count(cell->type) && cell->hasPort(ID::Q)) {
+	if (siminit && RTLIL::builtin_ff_cell_types().count(cell->type) && cell->hasPort(ID::Q) && !cell->type.in(ID($ff), ID($_FF_))) {
 		std::stringstream ss;
 		dump_reg_init(ss, cell->getPort(ID::Q));
 		if (!ss.str().empty()) {
@@ -1987,7 +1989,7 @@ void dump_module(std::ostream &f, std::string indent, RTLIL::Module *module)
 		std::set<std::pair<RTLIL::Wire*,int>> reg_bits;
 		for (auto cell : module->cells())
 		{
-			if (!reg_ct.count(cell->type) || !cell->hasPort(ID::Q))
+			if (!RTLIL::builtin_ff_cell_types().count(cell->type) || !cell->hasPort(ID::Q) || cell->type.in(ID($ff), ID($_FF_)))
 				continue;
 
 			RTLIL::SigSpec sig = cell->getPort(ID::Q);
@@ -2201,33 +2203,6 @@ struct VHDLBackend : public Backend {
 
 		auto_name_map.clear();
 		reg_wires.clear();
-		reg_ct.clear();
-
-		reg_ct.insert(ID($dff));
-		reg_ct.insert(ID($adff));
-		reg_ct.insert(ID($dffe));
-		reg_ct.insert(ID($dlatch));
-
-		reg_ct.insert(ID($_DFF_N_));
-		reg_ct.insert(ID($_DFF_P_));
-
-		reg_ct.insert(ID($_DFF_NN0_));
-		reg_ct.insert(ID($_DFF_NN1_));
-		reg_ct.insert(ID($_DFF_NP0_));
-		reg_ct.insert(ID($_DFF_NP1_));
-		reg_ct.insert(ID($_DFF_PN0_));
-		reg_ct.insert(ID($_DFF_PN1_));
-		reg_ct.insert(ID($_DFF_PP0_));
-		reg_ct.insert(ID($_DFF_PP1_));
-
-		reg_ct.insert(ID($_DFFSR_NNN_));
-		reg_ct.insert(ID($_DFFSR_NNP_));
-		reg_ct.insert(ID($_DFFSR_NPN_));
-		reg_ct.insert(ID($_DFFSR_NPP_));
-		reg_ct.insert(ID($_DFFSR_PNN_));
-		reg_ct.insert(ID($_DFFSR_PNP_));
-		reg_ct.insert(ID($_DFFSR_PPN_));
-		reg_ct.insert(ID($_DFFSR_PPP_));
 
 		size_t argidx;
 		for (argidx = 1; argidx < args.size(); argidx++) {
@@ -2321,7 +2296,6 @@ struct VHDLBackend : public Backend {
 
 		auto_name_map.clear();
 		reg_wires.clear();
-		reg_ct.clear();
 	}
 } VerilogBackend;
 
