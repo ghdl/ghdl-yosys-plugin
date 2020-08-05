@@ -42,7 +42,7 @@ std::string auto_prefix, extmem_prefix;
 
 RTLIL::Module *active_module;
 dict<RTLIL::SigBit, RTLIL::State> active_initdata;
-std::unordered_set<unsigned int> memory_array_types;
+std::set<unsigned int> memory_array_types;
 SigMap active_sigmap;
 
 // ASCII control character mapping
