@@ -1673,11 +1673,13 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		// TODO dump `assert` as a typical VHDL assert with severity, etc. ?
 		log_warning("Cell of type %s will be dumped as a PSL comment\n",
 			cell->type.c_str()+1);
+		log("PSL unclocked assertions do not work (yet) with GHDL\n");
 		log_experimental("Formal cells as PSL comments");
-		f << stringf("%s" "-- psl %s (", indent.c_str(), cell->type.c_str()+1);
+		f << stringf("%s" "-- psl %s ", indent.c_str(), cell->type.c_str()+1);
 		if (cell->type != ID($cover)) {
 			f << stringf("always ");
 		}
+		f << stringf("(");
 		dump_sigspec(f, cell->getPort(ID::EN));
 		f << stringf(" -> ");
 		dump_sigspec(f, cell->getPort(ID::A));
