@@ -1670,20 +1670,31 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 
 	if (cell->type.in(ID($assert), ID($assume), ID($cover)))
 	{
-		// TODO dump `assert` as a typical VHDL assert with severity, etc. ?
-		log_warning("Cell of type %s will be dumped as a PSL comment\n",
-			cell->type.c_str()+1);
-		log("PSL unclocked assertions do not work (yet) with GHDL\n");
-		log_experimental("Formal cells as PSL comments");
-		f << stringf("%s" "-- psl %s ", indent.c_str(), cell->type.c_str()+1);
-		if (cell->type != ID($cover)) {
-			f << stringf("always ");
+		if (cell->type != ID($assert)) {
+			log_warning("Cell of type %s will be dumped as a PSL comment\n",
+				cell->type.c_str()+1);
+			log("PSL unclocked assertions do not work (yet) with GHDL\n");
 		}
-		f << stringf("(");
-		dump_sigspec(f, cell->getPort(ID::EN));
-		f << stringf(" -> ");
-		dump_sigspec(f, cell->getPort(ID::A));
-		f << stringf(");\n");
+		log_experimental("Formal cells as asserts/PSL comments");
+		std::stringstream en_sstream;
+		std::stringstream a_sstream; // Not actually arbitrary haha
+		string en_str;
+		string a_str; // [A]rticle of interest
+		dump_sigspec(en_sstream, cell->getPort(ID::EN));
+		dump_sigspec(a_sstream, cell->getPort(ID::A));
+		en_str = en_sstream.str();
+		a_str = a_sstream.str();
+		if (cell->type == ID($assert)) {
+			f << stringf("%s" "assert (not %s) or %s;", indent.c_str(),
+					en_str.c_str(),a_str.c_str());
+			f << stringf(" -- %s -> %s\n", en_str.c_str(), a_str.c_str());
+		} else {
+			f << stringf("%s" "-- psl %s ", indent.c_str(), cell->type.c_str()+1);
+			if (cell->type != ID($cover)) {
+				f << stringf("always ");
+			}
+			f << stringf("(%s -> %s);\n", en_str.c_str(), a_str.c_str());
+		}
 		return true;
 	}
 
