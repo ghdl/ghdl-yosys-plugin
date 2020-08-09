@@ -874,10 +874,16 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		f << stringf("%s", indent.c_str());
 		dump_sigspec(f, cell->getPort(ID::Y));
 		f << stringf(" <= ");
-		f << stringf("not (or ");
+		// Unary or only if signal is a vector
+		bool need_unary_or = cell->getPort(ID::A).as_wire()->width > 1;
+		if (need_unary_or) {
+			f << stringf("not (or ");
+		} else {
+			f << stringf("not ");
+		}
 		//dump_attributes(f, "", cell->attributes, ' ');
 		dump_cell_expr_port(f, cell, "A", false, false);
-		f << stringf(");\n");
+		f << stringf("%s;\n", need_unary_or ? ")" : "");
 		return true;
 	}
 	HANDLE_BINOP(ID($logic_and), "and", false)
