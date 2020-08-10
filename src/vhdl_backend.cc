@@ -1226,196 +1226,201 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		return true;
 	}
 
-	// Trash the below and reimport/copy new FfData stuff in
-	if (cell->type == ID($dffsr))
+	/*
+	 * Use a single process to wrap the entire thing
+	 * Each bit is programatically unrolled (like a for..generate statement)
+	 * Grouping will be more obvious this way
+	 * Entire FF group shares a cell type so a single sensitivity list suffices
+	 */
+	if (RTLIL::builtin_ff_cell_types().count(cell->type))
 	{ // porting in progress
-		SigSpec sig_clk = cell->getPort(ID::CLK);
-		SigSpec sig_set = cell->getPort(ID::SET);
-		SigSpec sig_clr = cell->getPort(ID::CLR);
-		SigSpec sig_d = cell->getPort(ID::D);
-		SigSpec sig_q = cell->getPort(ID::Q);
+		FfData ff(nullptr, cell);
 
-		int width = cell->parameters[ID::WIDTH].as_int();
-		bool pol_clk = cell->parameters[ID::CLK_POLARITY].as_bool();
-		bool pol_set = cell->parameters[ID::SET_POLARITY].as_bool();
-		bool pol_clr = cell->parameters[ID::CLR_POLARITY].as_bool();
+		// $ff / $_FF_ cell: not supported.
+		if (ff.has_d && !ff.has_clk && !ff.has_en)
+			return false;
 
 		std::string reg_name = cellname(cell);
-		bool out_is_reg_wire = is_reg_wire(sig_q, reg_name);
-
+		bool out_is_reg_wire = is_reg_wire(ff.sig_q, reg_name);
 		std::string assignment_operator = out_is_reg_wire ? "<=" : ":=";
+		bool systemverilog = false; // temp
 
-		if (!out_is_reg_wire) {
-			f << stringf("%s" "  variable %s: STD_LOGIC_VECTOR (%d downto 0)", indent.c_str(), reg_name.c_str(), width-1);
-			dump_reg_init(f, sig_q);
-			f << ";\n";
-		}
-		// This could look nicer as a generate statement
-		for (int i = 0; i < width; i++) {
-			f << stringf("%s" "always @(%sedge ", indent.c_str(), pol_clk ? "pos" : "neg");
-			dump_sigspec(f, sig_clk);
-			f << stringf(", %sedge ", pol_set ? "pos" : "neg");
-			dump_sigspec(f, sig_set);
-			f << stringf(", %sedge ", pol_clr ? "pos" : "neg");
-			dump_sigspec(f, sig_clr);
-			f << stringf(")\n");
-
-			f << stringf("%s" "  if (%s", indent.c_str(), pol_clr ? "" : "!");
-			dump_sigspec(f, sig_clr);
-			f << stringf(") %s[%d] <= 1'b0;\n", reg_name.c_str(), i);
-
-			f << stringf("%s" "  else if (%s", indent.c_str(), pol_set ? "" : "!");
-			dump_sigspec(f, sig_set);
-			f << stringf(") %s[%d] <= 1'b1;\n", reg_name.c_str(), i);
-
-			f << stringf("%s" "  else  %s[%d] <= ", indent.c_str(), reg_name.c_str(), i);
-			dump_sigspec(f, sig_d[i]);
-			f << stringf(";\n");
-		}
-
-		if (!out_is_reg_wire) {
-			f << stringf("%s" "assign ", indent.c_str());
-			dump_sigspec(f, sig_q);
-			f << stringf(" = %s;\n", reg_name.c_str());
-		}
-
-		return true;
-	}
-
-	if (cell->type.in(ID($dff), ID($adff), ID($dffe)))
-	{
-		RTLIL::SigSpec sig_clk, sig_arst, sig_en, val_arst;
-		bool pol_clk, pol_arst = false, pol_en = false;
-
-		sig_clk = cell->getPort(ID::CLK);
-		pol_clk = cell->parameters[ID::CLK_POLARITY].as_bool();
-
-		if (cell->type == ID($adff)) {
-			sig_arst = cell->getPort(ID::ARST);
-			pol_arst = cell->parameters[ID::ARST_POLARITY].as_bool();
-			val_arst = RTLIL::SigSpec(cell->parameters[ID::ARST_VALUE]);
-		}
-
-		if (cell->type == ID($dffe)) {
-			sig_en = cell->getPort(ID::EN);
-			pol_en = cell->parameters[ID::EN_POLARITY].as_bool();
-		}
-
-		std::string reg_name = cellname(cell);
-		bool out_is_reg_wire = is_reg_wire(cell->getPort(ID::Q), reg_name);
-
-		std::string assignment_operator = out_is_reg_wire ? "<=" : ":=";
-
-		f << stringf("%s" "process (", indent.c_str());
-		// Implicit assumption that clock and reset sigs are 1 wide
-		dump_sigspec(f, sig_clk);
-		if (cell->type == ID($adff)) {
-			f << stringf(", ");
-			dump_sigspec(f, sig_arst);
-		}
-		f << stringf(") is\n");
-
-		if (!out_is_reg_wire) {
-			f << stringf("%s" "  variable %s: STD_LOGIC_VECTOR (%d downto 0)",
-				indent.c_str(), reg_name.c_str(), 
-				cell->parameters[ID::WIDTH].as_int()-1);
-			dump_reg_init(f, cell->getPort(ID::Q));
-			f << ";\n";
-		}
-		f << stringf("%s" "begin\n", indent.c_str());
-
-		if (cell->type == ID($adff)) {
-			f << stringf("%s" "  if ", indent.c_str());
-			dump_sigspec(f, sig_arst);
-			f << stringf(" = '%c'", pol_arst ? '1' : '0');
-			f << stringf(" then\n");
-			f << stringf("%s" "    %s %s ", indent.c_str(),
-				reg_name.c_str(), assignment_operator.c_str());
-			dump_sigspec(f, val_arst);
-			f << stringf(";\n");
-			f << stringf("%s" "  elsif ", indent.c_str());
+		// Sensitivity list
+		std::set<RTLIL::SigSpec> sensitivity_set;
+		if (ff.has_clk) {
+			sensitivity_set.insert(ff.sig_clk);
 		} else {
-			f << stringf("%s" "  if ", indent.c_str());
+			sensitivity_set.insert(ff.sig_d);
+			sensitivity_set.insert(ff.sig_en);
 		}
-		f << stringf("%s_edge(", pol_clk ? "rising" : "falling");
-		dump_sigspec(f, sig_clk);
-		f << stringf(") then\n");
-
-		if (cell->type == ID($dffe)) {
-			f << stringf("%s" "    if (", indent.c_str());
-			dump_sigspec(f, sig_en);
-			f << stringf(" = '%c'", pol_en ? '1' : '0');
-			f << stringf(") then\n");
-			f << stringf("%s" "      %s %s ", indent.c_str(),
-				reg_name.c_str(), assignment_operator.c_str());
-		} else {
-			f << stringf("%s" "    %s %s ", indent.c_str(),
-			reg_name.c_str(), assignment_operator.c_str());
+		if (ff.has_sr) {
+			sensitivity_set.insert(ff.sig_clr);
+			sensitivity_set.insert(ff.sig_set);
+		} else if (ff.has_arst) {
+			sensitivity_set.insert(ff.sig_arst);
 		}
-
-		dump_cell_expr_port(f, cell, "D", false);
-		f << stringf(";\n");
-
-		if (cell->type == ID($dffe)) {
-			f << stringf("%s" "    end if;\n", indent.c_str());
-		}
-		f << stringf("%s" "  end if;\n", indent.c_str());
-
-		if (!out_is_reg_wire) {
-			f << stringf("%s", indent.c_str());
-			dump_sigspec(f, cell->getPort(ID::Q));
-			f << stringf(" <= %s;\n", reg_name.c_str());
-		}
-		f << stringf("%s" "end process;\n", indent.c_str());
-
-		return true;
-	}
-
-	if (cell->type == ID($dlatch))
-	{
-		RTLIL::SigSpec sig_en;
-		bool pol_en = false;
-
-		sig_en = cell->getPort(ID::EN);
-		pol_en = cell->parameters[ID::EN_POLARITY].as_bool();
-
-		std::string reg_name = cellname(cell);
-		bool out_is_reg_wire = is_reg_wire(cell->getPort(ID::Q), reg_name);
-
-		std::string assignment_operator = out_is_reg_wire ? "<=" : ":=";
-
 		f << stringf("%s" "process(", indent.c_str());
-		dump_sigspec(f, sig_en);
-		f << stringf(", ");
-		// TODO: the following would break for nontrivial expressions
-		dump_cell_expr_port(f, cell, "D", false);
+		bool is_first_sensitivity_chunk = true;
+		for (RTLIL::SigChunk chunk: get_sensitivity_set(sensitivity_set)) {
+			if (!is_first_sensitivity_chunk) {
+				f << ", ";
+			}
+			dump_sigchunk(f, chunk);
+			is_first_sensitivity_chunk = false;
+		}
 		f << stringf(") is\n");
 
 		if (!out_is_reg_wire) {
-			f << stringf("%s" "variable %s: std_logic_vector (%d downto0)",
-				indent.c_str(),
-				reg_name.c_str(), cell->parameters[ID::WIDTH].as_int()-1);
-			dump_reg_init(f, cell->getPort(ID::Q));
+			if (ff.width == 1)
+				f << stringf("%s" "  variable %s: STD_LOGIC", indent.c_str(), reg_name.c_str());
+			else
+				f << stringf("%s" "  variable %s: STD_LOGIC_VECTOR (%d downto 0)", indent.c_str(), reg_name.c_str(), ff.width-1);
+			dump_reg_init(f, ff.sig_q);
 			f << ";\n";
 		}
 
 		f << stringf("%s" "begin\n", indent.c_str());
 
-		f << stringf("%s" "  if (", indent.c_str());
-		dump_sigspec(f, sig_en);
-		f << stringf(" = '%c') then\n",  pol_en ? '1' : '0');
+		// If the FF has CLR/SET inputs, emit every bit slice separately.
+		int chunks = ff.has_sr ? ff.width : 1;
+		bool chunky = ff.has_sr && ff.width != 1;
 
-		f << stringf("%s" "    %s %s ", indent.c_str(),
-			reg_name.c_str(), assignment_operator.c_str());
-		dump_cell_expr_port(f, cell, "D", false);
-		f << stringf(";\n");
-		f << stringf("%s" "  end if;\n", indent.c_str());
+		for (int i = 0; i < chunks; i++)
+		{
+			SigSpec sig_d;
+			Const val_arst, val_srst;
+			std::string reg_bit_name;
+			if (chunky) {
+				reg_bit_name = stringf("%s(%d)", reg_name.c_str(), i);
+				if (ff.has_d)
+					sig_d = ff.sig_d[i];
+			} else {
+				reg_bit_name = reg_name;
+				if (ff.has_d)
+					sig_d = ff.sig_d;
+			}
+			if (ff.has_arst)
+				val_arst = chunky ? ff.val_arst[i] : ff.val_arst;
+			if (ff.has_srst)
+				val_srst = chunky ? ff.val_srst[i] : ff.val_srst;
 
+			dump_attributes(f, indent, cell->attributes);
+			// TODO: replace dump_sigspec with dump_const when appropriate
+			// Cannot combine as much string gen because VHDL is stricter
+			// TODO: avoid code sharing when it decreases legibility
+			if (ff.has_clk)
+			{
+				// FFs.
+				f << stringf("%s" "  if ", indent.c_str());
+				// Generate asynchronous behavior syntax
+				if (ff.has_sr) {
+					// Async reset in SR pair
+					dump_sigspec(f, ff.sig_clr[i]);
+					f << stringf(" = '%c' then\n", ff.pol_clr ? '1' : '0');
+					f << stringf("%s    ", indent.c_str());
+					f << stringf("%s %s '0';\n", reg_bit_name.c_str(), assignment_operator.c_str());
+					// Async set in SR pair
+					f << stringf("%s" "  elsif ", indent.c_str());
+					dump_sigspec(f, ff.sig_set[i]);
+					f << stringf(" = '%c' then\n", ff.pol_set ? '1' : '0');
+					f << stringf("%s    ", indent.c_str());
+					f << stringf("%s %s '1';\n", reg_bit_name.c_str(), assignment_operator.c_str());
+					f << stringf("%s" "  elsif ", indent.c_str());
+				} else if (ff.has_arst) {
+					dump_sigspec(f, ff.sig_arst);
+					f << stringf(" = '%c' then\n", ff.pol_arst ? '1' : '0');
+					f << stringf("%s    ", indent.c_str());
+					f << stringf("%s %s '0';\n", reg_bit_name.c_str(), assignment_operator.c_str());
+					f << stringf("%s" "  elsif ", indent.c_str());
+				}
+				f << stringf("%s_edge(", ff.pol_clk ? "rising" : "falling");
+				dump_sigspec(f, ff.sig_clk);
+				f << stringf(") then\n");
+				// ff.ce_over_srst means sync-reset is also gated by enable
+				if (ff.has_srst && ff.has_en && ff.ce_over_srst) {
+					f << stringf("%s" "    if (", indent.c_str());
+					dump_sigspec(f, ff.sig_en);
+					f << stringf(" = '%c' then\n", ff.pol_en ? '1' : '0');
+					f << stringf("%s" "      if (", indent.c_str());
+					dump_sigspec(f, ff.sig_srst);
+					f << stringf(" = '%c' then\n", ff.pol_srst ? '1' : '0');
+					f << stringf("%s" "        %s %s ", indent.c_str(), reg_bit_name.c_str(), assignment_operator.c_str());
+					dump_sigspec(f, val_srst);
+					f << stringf(";\n");
+					f << stringf("%s" "      else\n", indent.c_str());
+					f << stringf("%s" "        %s %s ", indent.c_str(), reg_bit_name.c_str(), assignment_operator.c_str());
+					dump_sigspec(f, sig_d);
+					f << stringf("%s" "      end if;\n", indent.c_str());
+					f << stringf("%s" "    end if;\n", indent.c_str());
+				} else {
+					// Check this
+					if (ff.has_srst) {
+						f << stringf("%s" "    if (", indent.c_str());
+						dump_sigspec(f, ff.sig_srst);
+						f << stringf(") then\n");
+						f << stringf("%s" "      %s %s ", indent.c_str(), reg_bit_name.c_str(), assignment_operator.c_str());
+						dump_sigspec(f, val_srst);
+						f << stringf(";\n");
+					}
+					if (ff.has_en) {
+						f << stringf("%s" "    %s (", indent.c_str(), ff.has_srst ? "elsif" : "if");
+						dump_sigspec(f, ff.sig_en);
+						f << stringf(") then\n");
+					}
+					if (ff.has_srst || ff.has_en) {
+						f << stringf("%s" "      %s %s ", indent.c_str(), reg_bit_name.c_str(), assignment_operator.c_str());
+						dump_sigspec(f, sig_d);
+						f << stringf(";\n");
+						f << stringf("%s" "    end if;\n", indent.c_str());
+					} else {
+						f << stringf("%s" "    %s %s ", indent.c_str(), reg_bit_name.c_str(), assignment_operator.c_str());
+						dump_sigspec(f, sig_d);
+						f << stringf(";\n");
+					}
+				}
+				f << stringf("%s" "  end if;\n", indent.c_str());
+			}
+			else
+			{
+				// Latches.
+				f << stringf("%s" "always%s\n", indent.c_str(), systemverilog ? "_latch" : " @*");
+
+				f << stringf("%s" "  ", indent.c_str());
+				if (ff.has_sr) {
+					f << stringf("if (%s", ff.pol_clr ? "" : "!");
+					dump_sigspec(f, ff.sig_clr[i]);
+					f << stringf(") %s = 1'b0;\n", reg_bit_name.c_str());
+					f << stringf("%s" "  else if (%s", indent.c_str(), ff.pol_set ? "" : "!");
+					dump_sigspec(f, ff.sig_set[i]);
+					f << stringf(") %s = 1'b1;\n", reg_bit_name.c_str());
+					if (ff.has_d)
+						f << stringf("%s" "  else ", indent.c_str());
+				} else if (ff.has_arst) {
+					f << stringf("if (%s", ff.pol_arst ? "" : "!");
+					dump_sigspec(f, ff.sig_arst);
+					f << stringf(") %s = ", reg_bit_name.c_str());
+					dump_sigspec(f, val_arst);
+					f << stringf(";\n");
+					if (ff.has_d)
+						f << stringf("%s" "  else ", indent.c_str());
+				}
+				if (ff.has_d) {
+					f << stringf("if (%s", ff.pol_en ? "" : "!");
+					dump_sigspec(f, ff.sig_en);
+					f << stringf(") %s = ", reg_bit_name.c_str());
+					dump_sigspec(f, sig_d);
+					f << stringf(";\n");
+				}
+			}
+		}
+
+		// Group inside process for readability
 		if (!out_is_reg_wire) {
-			f << stringf("%s", indent.c_str());
-			dump_sigspec(f, cell->getPort(ID::Q));
+			f << stringf("%s  ", indent.c_str());
+			dump_sigspec(f, ff.sig_q);
 			f << stringf(" <= %s;\n", reg_name.c_str());
 		}
+
 		f << stringf("%s" "end process;\n", indent.c_str());
 
 		return true;
