@@ -69,6 +69,19 @@ std::set<RTLIL::SigChunk> get_sensitivity_set(RTLIL::SigSpec sigspec)
 }
 
 std::set<RTLIL::SigChunk>
+get_sensitivity_set(std::set<RTLIL::SigSpec> sigspecs)
+{
+	std::set<RTLIL::SigChunk> wire_chunks;
+	for (RTLIL::SigSpec sigspec: sigspecs) {
+		std::set<RTLIL::SigChunk> wires_in_chunk;
+		wires_in_chunk = get_sensitivity_set(sigspec);
+		wire_chunks.insert(wires_in_chunk.begin(), wires_in_chunk.end());
+	}
+	return wire_chunks;
+}
+
+// Takes precedence for braced initialization
+std::set<RTLIL::SigChunk>
 get_sensitivity_set(std::initializer_list<RTLIL::SigSpec> sigspecs)
 {
 	std::set<RTLIL::SigChunk> wire_chunks;
@@ -79,6 +92,8 @@ get_sensitivity_set(std::initializer_list<RTLIL::SigSpec> sigspecs)
 	}
 	return wire_chunks;
 }
+
+// TODO: void dump_sensitivity_set(std::set<RTLIL::SigChunk>)?
 
 void reset_auto_counter_id(RTLIL::IdString id, bool may_rename)
 { // NO PORTING REQUIRED
