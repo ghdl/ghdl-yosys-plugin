@@ -1717,9 +1717,15 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		} else {
 			f << stringf("%s" "-- psl %s ", indent.c_str(), cell->type.c_str()+1);
 			if (cell->type != ID($cover)) {
-				f << stringf("always ");
+				f << stringf("always (%s -> %s);\n",
+						en_str.c_str(), a_str.c_str());
+			} else {
+				/*
+				 * PSL cover statements require a Sequence (PSL 2005 7.1.6)
+				 * Construct a one-long sequence as a Braced SERE
+				 */
+				f << stringf("{%s -> %s};\n", en_str.c_str(), a_str.c_str());
 			}
-			f << stringf("(%s -> %s);\n", en_str.c_str(), a_str.c_str());
 		}
 		return true;
 	}
