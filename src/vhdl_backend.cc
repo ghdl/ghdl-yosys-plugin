@@ -1243,7 +1243,6 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		std::string reg_name = cellname(cell);
 		bool out_is_reg_wire = is_reg_wire(ff.sig_q, reg_name);
 		std::string assignment_operator = out_is_reg_wire ? "<=" : ":=";
-		bool systemverilog = false; // temp
 
 		// Sensitivity list
 		std::set<RTLIL::SigSpec> sensitivity_set;
@@ -1383,34 +1382,43 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 			else
 			{
 				// Latches.
-				f << stringf("%s" "always%s\n", indent.c_str(), systemverilog ? "_latch" : " @*");
-
 				f << stringf("%s" "  ", indent.c_str());
+				// Assumption that at least one of these ifs will be hit
+				// Awkward "els" is first half of "elsif"
 				if (ff.has_sr) {
-					f << stringf("if (%s", ff.pol_clr ? "" : "!");
+					f << stringf("if ");
 					dump_sigspec(f, ff.sig_clr[i]);
-					f << stringf(") %s = 1'b0;\n", reg_bit_name.c_str());
-					f << stringf("%s" "  else if (%s", indent.c_str(), ff.pol_set ? "" : "!");
+					f << stringf(" = '%c' then\n", ff.pol_clr ? '1' : '0');
+					f << stringf("%s" "    %s %s '0';\n", indent.c_str(), 
+							reg_bit_name.c_str(), assignment_operator.c_str());
+					f << stringf("%s" "  elsif ", indent.c_str());
 					dump_sigspec(f, ff.sig_set[i]);
-					f << stringf(") %s = 1'b1;\n", reg_bit_name.c_str());
+					f << stringf(" = '%c' then\n", ff.pol_set ? '1' : '0');
+					f << stringf("%s" "    %s %s '1';\n", indent.c_str(), 
+							reg_bit_name.c_str(), assignment_operator.c_str());
 					if (ff.has_d)
-						f << stringf("%s" "  else ", indent.c_str());
+						f << stringf("%s" "  els", indent.c_str());
 				} else if (ff.has_arst) {
-					f << stringf("if (%s", ff.pol_arst ? "" : "!");
+					f << stringf("if (");
 					dump_sigspec(f, ff.sig_arst);
-					f << stringf(") %s = ", reg_bit_name.c_str());
+					f << stringf(" = '%c' then\n", ff.pol_arst ? '1' : '0');
+					f << stringf("%s" "    %s %s ", indent.c_str(),
+							reg_bit_name.c_str(), assignment_operator.c_str());
 					dump_sigspec(f, val_arst);
 					f << stringf(";\n");
 					if (ff.has_d)
-						f << stringf("%s" "  else ", indent.c_str());
+						f << stringf("%s" "  els", indent.c_str());
 				}
 				if (ff.has_d) {
-					f << stringf("if (%s", ff.pol_en ? "" : "!");
+					f << stringf("if ");
 					dump_sigspec(f, ff.sig_en);
-					f << stringf(") %s = ", reg_bit_name.c_str());
+					f << stringf(" = '%c' then\n", ff.pol_en ? '1' : '0');
+					f << stringf("%s" "    %s %s ", indent.c_str(),
+							reg_bit_name.c_str(), assignment_operator.c_str());
 					dump_sigspec(f, sig_d);
 					f << stringf(";\n");
 				}
+				f << stringf("%s" "  end if;\n", indent.c_str());
 			}
 		}
 
