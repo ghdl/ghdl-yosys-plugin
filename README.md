@@ -1,11 +1,11 @@
 <p align="center">
-  <a title="Read the Docs" href="http://ghdl.readthedocs.io/en/latest/using/Synthesis.html"><img src="https://img.shields.io/readthedocs/ghdl.svg?longCache=true&style=flat-square&logo=read-the-docs&logoColor=e8ecef&label=ghdl.rtfd.io"></a><!--
+  <a title="GHDL synthesis documentation" href="https://ghdl.github.io/ghdl/using/Synthesis.html"><img src="https://img.shields.io/website.svg?label=ghdl.github.io%2Fghdl&longCache=true&style=flat-square&url=http%3A%2F%2Fghdl.github.io%2Fghdl%2Findex.html"></a><!--
   -->
   <a title="Join the chat at https://gitter.im/ghdl1/Lobby" href="https://gitter.im/ghdl1/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge"><img src="https://img.shields.io/badge/chat-on%20gitter-4db797.svg?longCache=true&style=flat-square&logo=gitter&logoColor=e8ecef"></a><!--
   -->
   <a title="Docker Images" href="https://github.com/ghdl/docker"><img src="https://img.shields.io/docker/pulls/ghdl/synth.svg?logo=docker&logoColor=e8ecef&style=flat-square&label=docker"></a><!--
   -->
-  <a title="'push' workflow Status" href="https://github.com/ghdl/ghdl-yosys-plugin/actions?query=workflow%3Apush"><img alt="'push' workflow Status" src="https://img.shields.io/github/workflow/status/ghdl/ghdl-yosys-plugin/push?longCache=true&style=flat-square&label=GHA&logo=github"></a>
+  <a title="'push' workflow Status" href="https://github.com/ghdl/ghdl-yosys-plugin/actions?query=workflow%3Apush"><img alt="'push' workflow Status" src="https://img.shields.io/github/workflow/status/ghdl/ghdl-yosys-plugin/push?longCache=true&style=flat-square&label=push&logo=Github%20Actions&logoColor=fff"></a>
 </p>
 
 # ghdl-yosys-plugin: VHDL synthesis (based on [ghdl](https://github.com/ghdl/ghdl) and [yosys](https://github.com/YosysHQ/yosys))
