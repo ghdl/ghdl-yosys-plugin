@@ -34,7 +34,7 @@
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
 
-bool verbose, norename, noattr, attr2comment, noexpr, nodec, nohex, nostr, extmem, defparam, siminit;
+bool verbose, norename, noattr, attr2comment, noexpr, nodec, nohex, nostr, extmem, siminit;
 int auto_name_counter, auto_name_offset, auto_name_digits, extmem_counter;
 std::map<RTLIL::IdString, int> auto_name_map;
 std::set<RTLIL::IdString> reg_wires;
@@ -1649,7 +1649,7 @@ void dump_cell(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 	dump_attributes(f, indent, cell->attributes);
 	f << stringf("%s" "%s", indent.c_str(), id(cell->type, false).c_str());
 
-	if (!defparam && cell->parameters.size() > 0) {
+	if (cell->parameters.size() > 0) {
 		f << stringf(" #(");
 		for (auto it = cell->parameters.begin(); it != cell->parameters.end(); ++it) {
 			if (it != cell->parameters.begin())
@@ -1698,14 +1698,6 @@ void dump_cell(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		f << stringf(")");
 	}
 	f << stringf("\n%s" ");\n", indent.c_str());
-
-	if (defparam && cell->parameters.size() > 0) {
-		for (auto it = cell->parameters.begin(); it != cell->parameters.end(); ++it) {
-			f << stringf("%sdefparam %s.%s = ", indent.c_str(), cell_name.c_str(), id(it->first).c_str());
-			dump_const(f, it->second);
-			f << stringf(";\n");
-		}
-	}
 
 	if (siminit && RTLIL::builtin_ff_cell_types().count(cell->type) && cell->hasPort(ID::Q) && !cell->type.in(ID($ff), ID($_FF_))) {
 		std::stringstream ss;
@@ -2086,10 +2078,6 @@ struct VHDLBackend : public Backend {
 		log("        with '.mem', e.g. 'write_verilog -extmem foo.v' writes 'foo-1.mem',\n");
 		log("        'foo-2.mem' and so on.\n");
 		log("\n");
-		log("    -defparam\n");
-		log("        use 'defparam' statements instead of the Verilog-2001 syntax for\n");
-		log("        cell parameters.\n");
-		log("\n");
 		log("    -blackboxes\n");
 		log("        usually modules with the 'blackbox' attribute are ignored. with\n");
 		log("        this option set only the modules with the 'blackbox' attribute\n");
@@ -2125,7 +2113,6 @@ struct VHDLBackend : public Backend {
 		nohex = false;
 		nostr = false;
 		extmem = false;
-		defparam = false;
 		siminit = false;
 		auto_prefix = "n";
 
@@ -2173,10 +2160,6 @@ struct VHDLBackend : public Backend {
 			if (arg == "-extmem") {
 				extmem = true;
 				extmem_counter = 1;
-				continue;
-			}
-			if (arg == "-defparam") {
-				defparam = true;
 				continue;
 			}
 			if (arg == "-siminit") {
