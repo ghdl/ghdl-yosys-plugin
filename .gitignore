@@ -4,6 +4,8 @@
 *.asc
 *.json
 *.blif
+*.edif
+*.ilang
 *.cf
 *.rpt
 *.o
