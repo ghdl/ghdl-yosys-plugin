@@ -48,7 +48,8 @@ static std::string to_str(Sname name)
 			res = '.' + string(get_cstr(get_sname_suffix(pfx))) + res;
 			break;
 		case Sname_Version:
-			res = '%' + stringf("%u", get_sname_version(pfx)) + res;
+			//  Use '$' for versions.  '%' is not supported by Xilinx ISE edif2ngc.
+			res = '$' + stringf("%u", get_sname_version(pfx)) + res;
 			break;
 		}
 	}
