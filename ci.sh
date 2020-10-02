@@ -21,6 +21,8 @@ cd "$(dirname $0)"
 
 #--
 
+do_plugin () {
+
 gstart "[Build] ghdl/synth:beta" "$ANSI_MAGENTA"
 
 docker build -t ghdl/synth:beta . -f- <<-EOF
@@ -41,7 +43,11 @@ EOF
 
 gend
 
+}
+
 #---
+
+do_formal () {
 
 gstart "[Build] ghdl/synth:formal" "$ANSI_MAGENTA"
 docker build -t ghdl/synth:formal --build-arg IMAGE='ghdl/synth:beta' . -f- <<-EOF
@@ -49,11 +55,35 @@ $(curl -fsSL https://github.com/ghdl/docker/raw/master/synth_formal.dockerfile)
 EOF
 gend "formal"
 
+}
+
 #---
 
-printf "${ANSI_MAGENTA}[Test] testsuite ${ANSI_NOCOLOR}\n"
+do_test () {
 
+printf "${ANSI_MAGENTA}[Test] testsuite ${ANSI_NOCOLOR}\n"
 docker run --rm -t -e CI -v /$(pwd)://src -w //src -e YOSYS='yosys -m ghdl' ghdl/synth:formal bash -c "$(cat <<EOF
 ./testsuite/testsuite.sh
 EOF
 )"
+
+}
+
+#---
+
+case $1 in
+  plugin)
+    do_plugin
+    ;;
+  formal)
+    do_plugin
+    do_formal
+    ;;
+  test)
+    do_test
+    ;;
+  *)
+    do_plugin
+    do_formal
+    do_test
+esac
