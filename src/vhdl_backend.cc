@@ -226,6 +226,19 @@ std::string id(RTLIL::IdString internal_id, bool may_rename = true)
 	return std::string(str);
 }
 
+/*
+ * Generate common syntax of comparing STD_LOGIC to a constant
+ * Bit conversion function (for conversion from SigSpecs) has width assertion
+ */
+std::string sigbit_equal_bool(RTLIL::SigBit sigBit, bool const_compare) {
+	// Assert that sigBit is not const
+	log_assert(sigBit.wire != NULL);
+	// TODO: Internal testing, delete
+	//log_assert(sigSpec.as_chunk().wire->name =)
+	return stringf("%s = '%c'",
+		id(sigBit.wire->name).c_str(), const_compare ? '1' : '0');
+}
+
 bool is_reg_wire(RTLIL::SigSpec sig, std::string &reg_name)
 { // PORTING NEEDS TESTING
 	if (!sig.is_chunk() || sig.as_chunk().wire == NULL)
@@ -1113,7 +1126,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 	 * Entire FF group shares a cell type so a single sensitivity list suffices
 	 */
 	if (RTLIL::builtin_ff_cell_types().count(cell->type))
-	{ // porting in progress
+	{ // porting needs testing
 		FfData ff(nullptr, cell);
 
 		// $ff / $_FF_ cell: not supported.
@@ -1194,20 +1207,25 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 				// Generate asynchronous behavior syntax
 				if (ff.has_sr) {
 					// Async reset in SR pair
-					dump_sigspec(f, ff.sig_clr[i]);
-					f << stringf(" = '%c' then\n", ff.pol_clr ? '1' : '0');
+					f << stringf("%s then\n",
+						sigbit_equal_bool(ff.sig_clr[i], ff.pol_clr).c_str());
+					//dump_sigspec(f, ff.sig_clr[i]);
+					//f << stringf(" = '%c' then\n", ff.pol_clr ? '1' : '0');
 					f << stringf("%s    ", indent.c_str());
 					f << stringf("%s %s '0';\n", reg_bit_name.c_str(), assignment_operator.c_str());
 					// Async set in SR pair
 					f << stringf("%s" "  elsif ", indent.c_str());
-					dump_sigspec(f, ff.sig_set[i]);
-					f << stringf(" = '%c' then\n", ff.pol_set ? '1' : '0');
+					f << stringf("%s then\n",
+						sigbit_equal_bool(ff.sig_set[i], ff.pol_set).c_str());
+					//dump_sigspec(f, ff.sig_set[i]);
+					//f << stringf(" = '%c' then\n", ff.pol_set ? '1' : '0');
 					f << stringf("%s    ", indent.c_str());
 					f << stringf("%s %s '1';\n", reg_bit_name.c_str(), assignment_operator.c_str());
 					f << stringf("%s" "  elsif ", indent.c_str());
 				} else if (ff.has_arst) {
-					dump_sigspec(f, ff.sig_arst);
-					f << stringf(" = '%c' then\n", ff.pol_arst ? '1' : '0');
+					f << stringf("%s then\n", sigbit_equal_bool(ff.sig_arst.as_bit(), ff.pol_arst).c_str());
+					//dump_sigspec(f, ff.sig_arst);
+					//f << stringf(" = '%c' then\n", ff.pol_arst ? '1' : '0');
 					f << stringf("%s    ", indent.c_str());
 					f << stringf("%s %s '0';\n", reg_bit_name.c_str(), assignment_operator.c_str());
 					f << stringf("%s" "  elsif ", indent.c_str());
@@ -1218,11 +1236,13 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 				// ff.ce_over_srst means sync-reset is also gated by enable
 				if (ff.has_srst && ff.has_en && ff.ce_over_srst) {
 					f << stringf("%s" "    if (", indent.c_str());
-					dump_sigspec(f, ff.sig_en);
-					f << stringf(" = '%c' then\n", ff.pol_en ? '1' : '0');
+					f << stringf("%s then\n", sigbit_equal_bool(ff.sig_en.as_bit(), ff.pol_en).c_str());
+					//dump_sigspec(f, ff.sig_en);
+					//f << stringf(" = '%c' then\n", ff.pol_en ? '1' : '0');
 					f << stringf("%s" "      if (", indent.c_str());
-					dump_sigspec(f, ff.sig_srst);
-					f << stringf(" = '%c' then\n", ff.pol_srst ? '1' : '0');
+					f << stringf("%s then\n", sigbit_equal_bool(ff.sig_srst.as_bit(), ff.pol_srst).c_str());
+					//dump_sigspec(f, ff.sig_srst);
+					//f << stringf(" = '%c' then\n", ff.pol_srst ? '1' : '0');
 					f << stringf("%s" "        %s %s ", indent.c_str(), reg_bit_name.c_str(), assignment_operator.c_str());
 					dump_sigspec(f, val_srst);
 					f << stringf(";\n");
@@ -1232,19 +1252,21 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 					f << stringf("%s" "      end if;\n", indent.c_str());
 					f << stringf("%s" "    end if;\n", indent.c_str());
 				} else {
-					// Check this
+					// Commented out stuff was broken
 					if (ff.has_srst) {
-						f << stringf("%s" "    if (", indent.c_str());
-						dump_sigspec(f, ff.sig_srst);
-						f << stringf(") then\n");
+						f << stringf("%s" "    if ", indent.c_str());
+						f << stringf("%s then\n", sigbit_equal_bool(ff.sig_srst.as_bit(), ff.pol_srst).c_str());
+						//dump_sigspec(f, ff.sig_srst);
+						//f << stringf(" then\n");
 						f << stringf("%s" "      %s %s ", indent.c_str(), reg_bit_name.c_str(), assignment_operator.c_str());
 						dump_sigspec(f, val_srst);
 						f << stringf(";\n");
 					}
 					if (ff.has_en) {
-						f << stringf("%s" "    %s (", indent.c_str(), ff.has_srst ? "elsif" : "if");
-						dump_sigspec(f, ff.sig_en);
-						f << stringf(") then\n");
+						f << stringf("%s" "    %s ", indent.c_str(), ff.has_srst ? "elsif" : "if");
+						f << stringf("%s then\n", sigbit_equal_bool(ff.sig_en.as_bit(), ff.pol_en).c_str());
+						//dump_sigspec(f, ff.sig_en);
+						//f << stringf(") then\n");
 					}
 					if (ff.has_srst || ff.has_en) {
 						f << stringf("%s" "      %s %s ", indent.c_str(), reg_bit_name.c_str(), assignment_operator.c_str());
@@ -1267,21 +1289,24 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 				// Awkward "els" is first half of "elsif"
 				if (ff.has_sr) {
 					f << stringf("if ");
-					dump_sigspec(f, ff.sig_clr[i]);
-					f << stringf(" = '%c' then\n", ff.pol_clr ? '1' : '0');
+					f << stringf("%s then \n", sigbit_equal_bool(ff.sig_clr[i], ff.pol_clr).c_str());
+					//dump_sigspec(f, ff.sig_clr[i]);
+					//f << stringf(" = '%c' then\n", ff.pol_clr ? '1' : '0');
 					f << stringf("%s" "    %s %s '0';\n", indent.c_str(), 
 							reg_bit_name.c_str(), assignment_operator.c_str());
 					f << stringf("%s" "  elsif ", indent.c_str());
-					dump_sigspec(f, ff.sig_set[i]);
-					f << stringf(" = '%c' then\n", ff.pol_set ? '1' : '0');
+					f << stringf("%s then \n", sigbit_equal_bool(ff.sig_set[i], ff.pol_set).c_str());
+					//dump_sigspec(f, ff.sig_set[i]);
+					//f << stringf(" = '%c' then\n", ff.pol_set ? '1' : '0');
 					f << stringf("%s" "    %s %s '1';\n", indent.c_str(), 
 							reg_bit_name.c_str(), assignment_operator.c_str());
 					if (ff.has_d)
 						f << stringf("%s" "  els", indent.c_str());
 				} else if (ff.has_arst) {
 					f << stringf("if (");
-					dump_sigspec(f, ff.sig_arst);
-					f << stringf(" = '%c' then\n", ff.pol_arst ? '1' : '0');
+					f << stringf("%s then\n", sigbit_equal_bool(ff.sig_arst.as_bit(), ff.pol_arst).c_str());
+					//dump_sigspec(f, ff.sig_arst);
+					//f << stringf(" = '%c' then\n", ff.pol_arst ? '1' : '0');
 					f << stringf("%s" "    %s %s ", indent.c_str(),
 							reg_bit_name.c_str(), assignment_operator.c_str());
 					dump_sigspec(f, val_arst);
@@ -1291,8 +1316,9 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 				}
 				if (ff.has_d) {
 					f << stringf("if ");
-					dump_sigspec(f, ff.sig_en);
-					f << stringf(" = '%c' then\n", ff.pol_en ? '1' : '0');
+					f << stringf("%s then\n", sigbit_equal_bool(ff.sig_en.as_bit(), ff.pol_en).c_str());
+					//dump_sigspec(f, ff.sig_en);
+					//f << stringf(" = '%c' then\n", ff.pol_en ? '1' : '0');
 					f << stringf("%s" "    %s %s ", indent.c_str(),
 							reg_bit_name.c_str(), assignment_operator.c_str());
 					dump_sigspec(f, sig_d);
