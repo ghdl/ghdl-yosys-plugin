@@ -302,6 +302,10 @@ void dump_const(std::ostream &f, const RTLIL::Const &data, int width = -1, int o
 			if (GetSize(bin_digits) <= 1)
 				goto dump_bin;
 			bool not_clean_hex = GetSize(bin_digits) % 4 != 0;
+			// TODO: double-check VHDL-93 language standard
+			if (not_clean_hex && !std08) {
+				goto dump_bin;
+			}
 			while (GetSize(bin_digits) % 4 != 0)
 				bin_digits.push_back('0');
 			for (int i = 0; i < GetSize(bin_digits); i += 4)
@@ -331,7 +335,6 @@ void dump_const(std::ostream &f, const RTLIL::Const &data, int width = -1, int o
 				int val = 8*(bit_3 - '0') + 4*(bit_2 - '0') + 2*(bit_1 - '0') + (bit_0 - '0');
 				hex_digits.push_back(val < 10 ? '0' + val : 'a' + val - 10);
 			}
-			// TODO: make this produce VHDL-93 compliant code
 			if (not_clean_hex) {
 				f << stringf("%d", width);
 			}
