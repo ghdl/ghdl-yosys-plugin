@@ -746,19 +746,100 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 	HANDLE_BINOP(ID($xor),  "xor",  false)
 	HANDLE_BINOP(ID($xnor), "xnor", false)
 
-	// Cheat a bit and use the VHDL-2008 operators for now
-	// TODO: replace the generated VHDL-2008 code with 93-compatible code
-	HANDLE_UNIOP(ID($reduce_and),  "and",  false)
-	HANDLE_UNIOP(ID($reduce_or),   "or",   false)
-	HANDLE_UNIOP(ID($reduce_xor),  "xor",  false)
-	HANDLE_UNIOP(ID($reduce_xnor), "xnor", false)
-	HANDLE_UNIOP(ID($reduce_bool), "or",   false)
+	if (std08) {
+		HANDLE_UNIOP(ID($reduce_and),  "and",  false)
+		HANDLE_UNIOP(ID($reduce_or),   "or",   false)
+		HANDLE_UNIOP(ID($reduce_xor),  "xor",  false)
+		HANDLE_UNIOP(ID($reduce_xnor), "xnor", false)
+		HANDLE_UNIOP(ID($reduce_bool), "or",   false)
+	} else {
+		if (cell->type == ID($reduce_and)) {
+			f << stringf("%s", indent.c_str());
+			dump_sigspec(f, cell->getPort(ID::Y));
+			f << stringf(" <= ");
+			f << stringf("'1' when ");
+			dump_attributes(f, "", cell->attributes, ' ');
+			dump_cell_expr_port(f, cell, "A", false, false);
+			// TODO: is "others" legal here?
+			f << stringf(" = (others => '1') else '0';\n");
+			return true;
+		}
+		if (cell->type.in(ID($reduce_or), ID($reduce_bool))) {
+			f << stringf("%s", indent.c_str());
+			dump_sigspec(f, cell->getPort(ID::Y));
+			f << stringf(" <= ");
+			f << stringf("'0' when ");
+			dump_attributes(f, "", cell->attributes, ' ');
+			dump_cell_expr_port(f, cell, "A", false, false);
+			// TODO: is "others" legal here?
+			f << stringf(" = (others => '0') else '1';\n");
+			return true;
+		}
+		if (cell->type.in(ID($reduce_xor), ID($reduce_xnor))) {
+			f << stringf("%s", indent.c_str());
+			dump_sigspec(f, cell->getPort(ID::Y));
+			f << stringf(" <= ");
+			if (cell->type == ID($reduce_xnor)) {
+				f << stringf("not (");
+			}
+			SigSpec port_A_sig = cell->getPort(ID::A);
+			dump_sigspec(f, port_A_sig);
+			for (auto it = port_A_sig.begin(); it != port_A_sig.end(); ++it) {
+				if (it != port_A_sig.begin()) {
+					f << stringf(" xor ");
+				}
+				dump_sigspec(f, *it);
+			}
+			if (cell->type == ID($reduce_xnor)) {
+				f << stringf(")");
+			}
+			f << stringf(";\n");
+			return true;
+		}
+	}
 
-	// TODO: port these
-	HANDLE_BINOP(ID($shl),  "<<",  false)
-	HANDLE_BINOP(ID($shr),  ">>",  false)
-	HANDLE_BINOP(ID($sshl), "<<<", true)
-	HANDLE_BINOP(ID($sshr), ">>>", true)
+	// TODO: These will break for nonconstant shifts in B
+	// Alternate {} aggregate: use always, or only for nonconstant B?
+
+	// TODO: cell attributes on B(?)
+	/*
+	 * Shift operator cells follow the Verilog behavior
+	 * 
+	 * Avoid using built-in operators sll, sla, srl, sra, rol, and rar
+	 * See https://jdebp.eu/FGA/bit-shifts-in-vhdl.html for explanation
+	 */
+
+	// IEEE 1364-2005: no sign extension done on either of the left shifts
+	if (cell->type.in(ID($shl), ID($sshl))) {
+		f << stringf("%s", indent.c_str());
+		dump_sigspec(f, cell->getPort(ID::Y));
+		f << stringf(" <= ");
+		f << stringf("std_logic_vector(");
+		f << stringf("shift_left(");
+		dump_cell_expr_port(f, cell, "A", true, true);
+		f << stringf(", ");
+		dump_cell_expr_port(f, cell, "B", true, true);
+		f << stringf("));\n");
+		return true;
+	}
+	/*
+	 * Verilog: sign extension determined by >> vs >>>
+	 * VHDL: sign extension determined by type of input
+	 */
+	if (cell->type.in(ID($shr), ID($sshr))) {
+		// Force cast to unsigned when not sign extending
+		bool sign_extend = (cell->type == ID($sshr));
+		f << stringf("%s", indent.c_str());
+		dump_sigspec(f, cell->getPort(ID::Y));
+		f << stringf(" <= ");
+		f << stringf("std_logic_vector(");
+		f << stringf("shift_right(");
+		dump_cell_expr_port(f, cell, "A", sign_extend, true);
+		f << stringf(", ");
+		dump_cell_expr_port(f, cell, "B", sign_extend, true);
+		f << stringf("));\n");
+		return true;
+	}
 
 	// TODO: port $eqx and $nex ("=" and "/=" return BIT, not STD_LOGIC)
 	// TODO: use "?<" instead of "<" (and analogous) for others?
