@@ -34,7 +34,7 @@
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
 
-bool verbose, norename, noattr, attr2comment, noexpr, nodec, nohex, nostr, extmem, siminit;
+bool std08, verbose, norename, noattr, attr2comment, noexpr, nodec, nohex, nostr, extmem, siminit;
 int auto_name_counter, auto_name_offset, auto_name_digits, extmem_counter;
 std::map<RTLIL::IdString, int> auto_name_map;
 std::set<RTLIL::IdString> reg_wires;
@@ -2030,6 +2030,9 @@ struct VHDLBackend : public Backend {
 		log("\n");
 		log("Write the current design to a VHDL file (WIP).\n");
 		log("\n");
+		log("    -std08\n");
+		log("        use some VHDL-2008 syntax for more readable code\n");
+		log("\n");
 		log("    -norename\n");
 		log("        without this option all internal object names (the ones with a dollar\n");
 		log("        instead of a backslash prefix) are changed to short names in the\n");
@@ -2102,6 +2105,7 @@ struct VHDLBackend : public Backend {
 	{ // PORTING TOP COMPLETE, SUBROUTINES IN PROGRESS
 		log_header(design, "Executing VHDL backend.\n");
 
+		std08 = false;
 		verbose = false;
 		norename = false;
 		noattr = false;
@@ -2123,6 +2127,10 @@ struct VHDLBackend : public Backend {
 		size_t argidx;
 		for (argidx = 1; argidx < args.size(); argidx++) {
 			std::string arg = args[argidx];
+			if (arg == "-std08") {
+				std08 = true;
+				continue;
+			}
 			if (arg == "-norename") {
 				norename = true;
 				continue;
