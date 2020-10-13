@@ -437,16 +437,16 @@ void dump_sigchunk(std::ostream &f, const RTLIL::SigChunk &chunk, bool no_decima
 			f << stringf("%s", id(chunk.wire->name).c_str());
 		} else if (chunk.width == 1) {
 			if (chunk.wire->upto)
-				f << stringf("%s (%d)", id(chunk.wire->name).c_str(), (chunk.wire->width - chunk.offset - 1) + chunk.wire->start_offset);
+				f << stringf("%s(%d)", id(chunk.wire->name).c_str(), (chunk.wire->width - chunk.offset - 1) + chunk.wire->start_offset);
 			else
-				f << stringf("%s (%d)", id(chunk.wire->name).c_str(), chunk.offset + chunk.wire->start_offset);
+				f << stringf("%s(%d)", id(chunk.wire->name).c_str(), chunk.offset + chunk.wire->start_offset);
 		} else {
 			if (chunk.wire->upto)
-				f << stringf("%s (%d to %d)", id(chunk.wire->name).c_str(),
+				f << stringf("%s(%d to %d)", id(chunk.wire->name).c_str(),
 						(chunk.wire->width - (chunk.offset + chunk.width - 1) - 1) + chunk.wire->start_offset,
 						(chunk.wire->width - chunk.offset - 1) + chunk.wire->start_offset);
 			else
-				f << stringf("%s (%d downto %d)", id(chunk.wire->name).c_str(),
+				f << stringf("%s(%d downto %d)", id(chunk.wire->name).c_str(),
 						(chunk.offset + chunk.width - 1) + chunk.wire->start_offset,
 						chunk.offset + chunk.wire->start_offset);
 		}
