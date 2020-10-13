@@ -1694,7 +1694,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		if (cell->type != ID($assert)) {
 			log_warning("Cell of type %s will be dumped as a PSL comment\n",
 				cell->type.c_str()+1);
-			log("PSL unclocked assertions do not work (yet) with GHDL\n");
+			log("PSL unclocked directives do not work (yet) with GHDL\n");
 		}
 		log_experimental("Formal cells as asserts/PSL comments");
 		std::stringstream en_sstream;
