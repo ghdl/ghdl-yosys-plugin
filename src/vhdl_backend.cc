@@ -517,7 +517,9 @@ void dump_wire(std::ostream &f, std::string indent, RTLIL::Wire *wire)
 	}
 }
 
-void dump_memory(std::ostream &f, std::string indent, RTLIL::Memory *memory)
+// Verilog backend's dump_memory is split into two functions
+// TODO: actually copy over the other one
+void dump_memory_types(std::ostream &f, std::string indent, RTLIL::Memory *memory)
 { // PORTING NEEDS TESTING
 	size_t is_element_present = memory_array_types.count(memory->width);
 	std::string memory_type_name = stringf("array_type_%d",memory->width);
@@ -2103,7 +2105,7 @@ void dump_module(std::ostream &f, std::string indent, RTLIL::Module *module)
 		dump_wire(f, indent + "  ", w);
 
 	for (auto it = module->memories.begin(); it != module->memories.end(); ++it)
-		dump_memory(f, indent + "  ", it->second);
+		dump_memory_types(f, indent + "  ", it->second);
 	f << stringf("%s" "begin\n", indent.c_str());
 	for (auto cell : module->cells())
 		dump_cell(f, indent + "  ", cell);
