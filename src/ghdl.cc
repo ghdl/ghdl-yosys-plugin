@@ -78,8 +78,9 @@ static std::string to_str(Sname name)
 			res = '.' + user_to_str(get_sname_suffix(pfx)) + res;
 			break;
 		case Sname_Version:
-			//  Use '$' for versions.  '%' is not supported by Xilinx ISE edif2ngc.
-			res = '$' + stringf("%u", get_sname_version(pfx)) + res;
+			//  Use ':' for versions.  '%' is not supported by Xilinx ISE edif2ngc.
+			//  ('$' is boring with tcl scripts)
+			res = ':' + stringf("%u", get_sname_version(pfx)) + res;
 			break;
 		}
 	}
