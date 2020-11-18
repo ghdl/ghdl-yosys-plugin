@@ -31,6 +31,36 @@ USING_YOSYS_NAMESPACE
 
 using namespace GhdlSynth;
 
+// Convert an Sname_User to a string.  Deals with extended names
+// Subroutine of to_str
+static std::string user_to_str(Name_Id id)
+{
+	const char *s = get_cstr(id);
+
+	if (s[0] != '\\')
+		return string(s);
+
+	// Extended name
+	// Case it can be converted to a name without the
+	// escape sequence.
+	int len = 1;
+	while (1) {
+		char c = s[len];
+		if (c == 0)
+			break;
+		if (c == '\\' && s[len + 1] == 0 && len > 2)
+			break;
+		if (!((c >= 'a' && c <= 'z')
+		      || (c >= 'A' && c <= 'Z')
+		      || (c >= '0' && c <= '9')
+		      || (c == '_' || c == '.')))
+			//  Unexpected character, return the name as is.
+			return string(s);
+		len++;
+	}
+	return string(s + 1, len - 1);
+}
+
 //  Convert an Sname to a string.
 static std::string to_str(Sname name)
 {
@@ -45,7 +75,7 @@ static std::string to_str(Sname name)
 			is_sys = true;
 			// fallthrough
 		case Sname_User:
-			res = '.' + string(get_cstr(get_sname_suffix(pfx))) + res;
+			res = '.' + user_to_str(get_sname_suffix(pfx)) + res;
 			break;
 		case Sname_Version:
 			//  Use '$' for versions.  '%' is not supported by Xilinx ISE edif2ngc.
