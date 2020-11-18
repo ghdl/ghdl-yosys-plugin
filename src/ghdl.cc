@@ -48,7 +48,7 @@ static std::string user_to_str(Name_Id id)
 		char c = s[len];
 		if (c == 0)
 			break;
-		if (c == '\\' && s[len + 1] == 0 && len > 2)
+		if (c == '\\' && s[len + 1] == 0 && len > 1)
 			break;
 		if (!((c >= 'a' && c <= 'z')
 		      || (c >= 'A' && c <= 'Z')
