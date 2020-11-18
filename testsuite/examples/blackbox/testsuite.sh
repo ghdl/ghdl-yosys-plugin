@@ -11,6 +11,7 @@ fgrep -q ".OUT(" blackbox2.v
 
 run_yosys -q -p "ghdl blackbox3.vhdl -e; write_verilog blackbox3.v"
 fgrep -q "\lib__cell__box2.3 " blackbox3.v
+fgrep -q ".O(" blackbox3.v
 
 clean
 echo OK
