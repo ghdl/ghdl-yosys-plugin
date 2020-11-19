@@ -50,8 +50,17 @@ gend
 do_formal () {
 
 gstart "[Build] ghdl/synth:formal" "$ANSI_MAGENTA"
-docker build -t ghdl/synth:formal --build-arg IMAGE='ghdl/synth:beta' . -f- <<-EOF
-$(curl -fsSL https://github.com/ghdl/docker/raw/master/synth_formal.dockerfile)
+docker build -t ghdl/synth:formal . -f- <<-EOF
+FROM hdlc/ghdl:yosys
+
+COPY --from=hdlc/pkg:z3 /z3 /
+COPY --from=hdlc/pkg:symbiyosys /symbiyosys /
+
+RUN apt-get update -qq \
+ && DEBIAN_FRONTEND=noninteractive apt-get -y install --no-install-recommends \
+    python3 \
+ && apt-get autoclean && apt-get clean && apt-get -y autoremove \
+ && rm -rf /var/lib/apt/lists/*
 EOF
 gend "formal"
 
