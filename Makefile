@@ -2,6 +2,8 @@
 
 # Name or path to the ghdl executable.
 GHDL=ghdl
+GIT_VERSION_RAW := "$(shell git describe --dirty --always --tags)"
+GIT_VERSION = '$(GIT_VERSION_RAW)'
 
 YOSYS_CONFIG=yosys-config
 SOEXT=so
@@ -14,7 +16,7 @@ LIBGHDL_INC:=$(shell $(GHDL) --libghdl-include-dir)
 
 ALL_LDFLAGS=$(LIBGHDL_LIB) -Wl,-rpath,$(dir $(LIBGHDL_LIB)) $(LDFLAGS)
 
-ALL_CFLAGS=-fPIC -DYOSYS_ENABLE_GHDL -I$(LIBGHDL_INC) $(CFLAGS)
+ALL_CFLAGS=-fPIC -DYOSYS_ENABLE_GHDL -DVERSION=$(GIT_VERSION) -I$(LIBGHDL_INC) $(CFLAGS)
 
 all: ghdl.$(SOEXT)
 
