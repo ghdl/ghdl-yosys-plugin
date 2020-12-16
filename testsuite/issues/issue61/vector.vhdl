@@ -15,5 +15,6 @@ begin
   v1 <= x"0ffffffffffffff0";
   v <= v1+(-1);
   u1 <= x"00ffffffffffff00";
-  u <= u1 + (-6); -- +4294967290;
+--  u <= u1 + (-6); -- +4294967290;
+  u <= u1 + 6;
 end synth;
