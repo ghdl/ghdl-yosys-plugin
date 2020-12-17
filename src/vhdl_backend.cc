@@ -844,14 +844,25 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		return true;
 	}
 
-	// TODO: port $eqx and $nex ("=" and "/=" return BIT, not STD_LOGIC)
-	// TODO: ?= and friends may be a VHDL-2008 addition?
-	// TODO: unported elements
-	// TODO: use "?<" instead of "<" (and analogous) for others?
+	/*
+	 * TODO: port $eqx and $nex
+	 * "=" and "/=" return BIT, not STD_LOGIC, so check what type conversions are needed
+	 * ?= and friends are a VHDL-2008 addition
+	 * TODO: use "?<" instead of "<" (and analogous) for others in 2008 mode?
+	 * TODO: Find a way to create ?= behavior in VHDL-1993
+	 * = and /= for $eq and $ne are wrong (though hitting the cases where the differ in real code is unlikely)
+	 * 
+	 * TODO: misc unported elements
+	 */
 	HANDLE_BINOP(ID($lt),  "<",  true)
 	HANDLE_BINOP(ID($le),  "<=", true)
-	HANDLE_BINOP(ID($eq),  "?=", false)
-	HANDLE_BINOP(ID($ne),  "?/=", false)
+	if (std08) {
+		HANDLE_BINOP(ID($eq),  "?=", false)
+		HANDLE_BINOP(ID($ne),  "?/=", false)
+	} else {
+		HANDLE_BINOP(ID($eq), "=", false)
+		HANDLE_BINOP(ID($ne), "/=", false)
+	}
 	HANDLE_BINOP(ID($eqx), "=", false)
 	HANDLE_BINOP(ID($nex), "/=", false)
 	HANDLE_BINOP(ID($ge),  ">=", true)
