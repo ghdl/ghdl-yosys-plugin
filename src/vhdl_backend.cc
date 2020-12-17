@@ -540,6 +540,7 @@ void dump_memory_types(std::ostream &f, std::string indent, RTLIL::Memory *memor
 		range_str.c_str());
 }
 
+// TODO: document results of gen_signed, gen_unsigned
 void dump_cell_expr_port(std::ostream &f, RTLIL::Cell *cell, std::string port, bool gen_signed = true, bool gen_unsigned = false)
 { // PORTING NEEDS TESTING
 	SigSpec signal_spec = cell->getPort("\\" + port);
@@ -844,6 +845,8 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 	}
 
 	// TODO: port $eqx and $nex ("=" and "/=" return BIT, not STD_LOGIC)
+	// TODO: ?= and friends may be a VHDL-2008 addition?
+	// TODO: unported elements
 	// TODO: use "?<" instead of "<" (and analogous) for others?
 	HANDLE_BINOP(ID($lt),  "<",  true)
 	HANDLE_BINOP(ID($le),  "<=", true)
@@ -859,7 +862,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 	HANDLE_BINOP(ID($mul), "*",   true)
 	HANDLE_BINOP(ID($div), "/",   true)
 	HANDLE_BINOP(ID($mod), "mod", true)
-	HANDLE_BINOP(ID($pow), "**",  true) // unported
+	HANDLE_BINOP(ID($pow), "**",  true)
 
 	if (cell->type == ID($logic_not)) {
 		// TODO: use VHDL-93 compliant syntax
@@ -941,7 +944,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 	}
 
 	if (cell->type == ID($modfloor))
-	{ // unported for now
+	{ // unported for now (rem?)
 		// wire truncated = $signed(A) % $signed(B);
 		// assign Y = (A[-1] == B[-1]) || truncated == 0 ? truncated : $signed(B) + $signed(truncated);
 
@@ -2152,6 +2155,7 @@ void write_header_imports(std::ostream &f, std::string indent)
 {
 	f << indent << "library IEEE;\n";
 	f << indent << "use IEEE.STD_LOGIC_1164.ALL;\n";
+	// Could scan for arithmetic-type cells, but this is too cumbersome
 	f << indent << "use IEEE.NUMERIC_STD.ALL;\n";
 	if (extmem) {
 		f << indent << "\nuse STD.TEXTIO.ALL\n";
