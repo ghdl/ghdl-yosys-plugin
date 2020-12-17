@@ -1703,25 +1703,51 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		std::stringstream a_sstream; // Not actually arbitrary haha
 		string en_str;
 		string a_str; // [A]rticle of interest
-		dump_sigspec(en_sstream, cell->getPort(ID::EN));
-		dump_sigspec(a_sstream, cell->getPort(ID::A));
+		SigSpec en_sigspec = cell->getPort(ID::EN);
+		dump_sigspec(en_sstream, en_sigspec);
+		/*
+		 * en_sigspec should be exactly one bit wide
+		 * Use this to skip the hypothesis portion of the implication
+		 * (A false hypothesis causes the property to be a tautology)
+		 */
+		bool en_const_on = en_sigspec.is_fully_ones();
 		en_str = en_sstream.str();
+
+		dump_sigspec(a_sstream, cell->getPort(ID::A));
 		a_str = a_sstream.str();
+		// TODO: special handling for asserts of x->'1'?
 		if (cell->type == ID($assert)) {
-			f << stringf("%s" "assert (not %s) or %s;", indent.c_str(),
-					en_str.c_str(),a_str.c_str());
-			f << stringf(" -- %s -> %s\n", en_str.c_str(), a_str.c_str());
-		} else {
-			f << stringf("%s" "-- psl %s ", indent.c_str(), cell->type.c_str()+1);
-			if (cell->type != ID($cover)) {
-				f << stringf("always (%s -> %s);\n",
+			if (en_const_on) {
+				f << stringf("%s" "assert %s;\n", indent.c_str(),
+						a_str.c_str());
+			} else {
+				f << stringf("%s" "assert (not %s) or %s;", indent.c_str(),
 						en_str.c_str(), a_str.c_str());
+				f << stringf(" -- %s -> %s\n", en_str.c_str(), a_str.c_str());
+			}
+		} else {
+			f << stringf("%s", indent.c_str());
+			if (!std08 && cell->type != ID($assert)) {
+				// PSL comment that GHDL interprets with -fpsl
+				f << stringf("-- psl ");
+			}
+			f << stringf("%s ", cell->type.c_str()+1);
+			const char* property_impl_str;
+			if (en_const_on) {
+				property_impl_str = a_str.c_str();
+			} else {
+				property_impl_str = stringf("%s -> %s",
+						en_str.c_str(), a_str.c_str()).c_str();
+			}
+			if (cell->type != ID($cover)) {
+				f << stringf("always (%s);\n",
+						property_impl_str);
 			} else {
 				/*
 				 * PSL cover statements require a Sequence (PSL 2005 7.1.6)
 				 * Construct a one-long sequence as a Braced SERE
 				 */
-				f << stringf("{%s -> %s};\n", en_str.c_str(), a_str.c_str());
+				f << stringf("{%s};\n", property_impl_str);
 			}
 		}
 		return true;
