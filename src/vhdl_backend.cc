@@ -19,7 +19,7 @@
 /*
  * A VHDL backend based on the Verilog backend.
  * Code structure here is regularly synced with the Verilog backend, except where noted
- * Last synced against Yosys d9af3cadf
+ * Last synced against Yosys 871fc34a
  */
 
 #include "kernel/register.h"
@@ -37,7 +37,7 @@
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
 
-bool std08, verbose, norename, noattr, attr2comment, noexpr, nodec, nohex, nostr, extmem, siminit;
+bool std08, verbose, norename, noattr, attr2comment, noexpr, nodec, nohex, nostr, extmem, siminit, simple_lhs;
 int auto_name_counter, auto_name_offset, auto_name_digits, extmem_counter;
 std::map<RTLIL::IdString, int> auto_name_map;
 std::set<RTLIL::IdString> reg_wires;
@@ -1851,11 +1851,23 @@ void dump_cell(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 
 void dump_conn(std::ostream &f, std::string indent, const RTLIL::SigSpec &left, const RTLIL::SigSpec &right)
 { // PORTING NEEDS TESTING
-	f << stringf("%s", indent.c_str());
-	dump_sigspec(f, left);
-	f << stringf(" <= ");
-	dump_sigspec(f, right);
-	f << stringf(";\n");
+	if (simple_lhs) {
+		int offset = 0;
+		for (auto &chunk : left.chunks()) {
+			f << stringf("%s", indent.c_str());
+			dump_sigspec(f, chunk);
+			f << stringf(" <= ");
+			dump_sigspec(f, right.extract(offset, GetSize(chunk)));
+			f << stringf(";\n");
+			offset += GetSize(chunk);
+		}
+	} else {
+		f << stringf("%s", indent.c_str());
+		dump_sigspec(f, left);
+		f << stringf(" <= ");
+		dump_sigspec(f, right);
+		f << stringf(";\n");
+	}
 }
 
 // This is a forward declaration
@@ -2223,6 +2235,9 @@ struct VHDLBackend : public Backend {
 		log("        deactivates this feature and instead will write string constants\n");
 		log("        as binary numbers.\n");
 		log("\n");
+		log("    -simple-lhs\n");
+		log("        Connection assignments with simple left hand side without concatenations.\n");
+		log("\n");
 		log("    -extmem\n");
 		log("        instead of initializing memories using assignments to individual\n");
 		log("        elements, use the '$readmemh' function to read initialization data\n");
@@ -2268,6 +2283,7 @@ struct VHDLBackend : public Backend {
 		nostr = false;
 		extmem = false;
 		siminit = false;
+		simple_lhs = false;
 		auto_prefix = "n";
 
 		bool blackboxes = false;
@@ -2330,6 +2346,10 @@ struct VHDLBackend : public Backend {
 			}
 			if (arg == "-selected") {
 				selected = true;
+				continue;
+			}
+			if (arg == "-simple-lhs") {
+				simple_lhs = true;
 				continue;
 			}
 			if (arg == "-v") {
