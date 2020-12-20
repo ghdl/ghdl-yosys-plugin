@@ -863,7 +863,7 @@ no_special_reg_name:
 void dump_cell_expr_uniop(std::ostream &f, std::string indent, RTLIL::Cell *cell, std::string op, bool is_arith_op = false)
 { // PORTING NEEDS TESTING
 	f << stringf("%s", indent.c_str());
-	dump_sigspec(f, cell->getPort(ID::Y));
+	dump_sigspec(f, cell->getPort(ID::Y), true);
 	f << stringf(" <= ");
 	if (is_arith_op) {
 		f << stringf("std_logic_vector(");
@@ -880,7 +880,7 @@ void dump_cell_expr_uniop(std::ostream &f, std::string indent, RTLIL::Cell *cell
 void dump_cell_expr_binop(std::ostream &f, std::string indent, RTLIL::Cell *cell, std::string op, bool is_arith_op = false)
 { // PORTING NEEDS TESTING
 	f << stringf("%s", indent.c_str());
-	dump_sigspec(f, cell->getPort(ID::Y));
+	dump_sigspec(f, cell->getPort(ID::Y), true);
 	f << stringf(" <= ");
 	if (is_arith_op) {
 		f << stringf("std_logic_vector(");
@@ -900,7 +900,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 	f << stringf("-- Cell type is %s\n", cell->type.c_str());
 	if (cell->type == ID($_NOT_)) {
 		f << stringf("%s", indent.c_str());
-		dump_sigspec(f, cell->getPort(ID::Y));
+		dump_sigspec(f, cell->getPort(ID::Y), true);
 		f << stringf(" <= ");
 		f << stringf("not ");
 		dump_attributes(f, "", cell->attributes, ' ');
@@ -911,7 +911,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 
 	if (cell->type.in(ID($_AND_), ID($_NAND_), ID($_OR_), ID($_NOR_), ID($_XOR_), ID($_XNOR_), ID($_ANDNOT_), ID($_ORNOT_))) {
 		f << stringf("%s", indent.c_str());
-		dump_sigspec(f, cell->getPort(ID::Y));
+		dump_sigspec(f, cell->getPort(ID::Y), true);
 		f << stringf(" <= ");
 		if (cell->type.in(ID($_NAND_), ID($_NOR_), ID($_XNOR_)))
 			f << stringf("not (");
@@ -938,7 +938,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		// TODO: attribute dumping was on B
 		dump_attributes(f, "", cell->attributes, ' ');
 		f << stringf("%s", indent.c_str());
-		dump_sigspec(f, cell->getPort(ID::Y));
+		dump_sigspec(f, cell->getPort(ID::Y), true);
 		f << stringf(" <= ");
 		dump_cell_expr_port(f, cell, "B", false);
 		f << stringf(" when ");
@@ -953,7 +953,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		// TODO: attribute dumping was on B
 		dump_attributes(f, "", cell->attributes, ' ');
 		f << stringf("%s" "assign ", indent.c_str());
-		dump_sigspec(f, cell->getPort(ID::Y));
+		dump_sigspec(f, cell->getPort(ID::Y), true);
 		f << stringf(" <= !(");
 		dump_cell_expr_port(f, cell, "B", false);
 		f << stringf(" when ");
@@ -966,7 +966,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 
 	if (cell->type.in(ID($_AOI3_), ID($_OAI3_))) {
 		f << stringf("%s", indent.c_str());
-		dump_sigspec(f, cell->getPort(ID::Y));
+		dump_sigspec(f, cell->getPort(ID::Y), true);
 		f << stringf(" <= not ((");
 		dump_cell_expr_port(f, cell, "A", false);
 		f << stringf(cell->type == ID($_AOI3_) ? " and " : " or ");
@@ -981,7 +981,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 
 	if (cell->type.in(ID($_AOI4_), ID($_OAI4_))) {
 		f << stringf("%s", indent.c_str());
-		dump_sigspec(f, cell->getPort(ID::Y));
+		dump_sigspec(f, cell->getPort(ID::Y), true);
 		f << stringf(" <= not ((");
 		dump_cell_expr_port(f, cell, "A", false);
 		f << stringf(cell->type == ID($_AOI4_) ? " and " : " or ");
@@ -1021,7 +1021,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 	} else {
 		if (cell->type == ID($reduce_and)) {
 			f << stringf("%s", indent.c_str());
-			dump_sigspec(f, cell->getPort(ID::Y));
+			dump_sigspec(f, cell->getPort(ID::Y), true);
 			f << stringf(" <= ");
 			f << stringf("'1' when ");
 			dump_attributes(f, "", cell->attributes, ' ');
@@ -1032,7 +1032,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		}
 		if (cell->type.in(ID($reduce_or), ID($reduce_bool))) {
 			f << stringf("%s", indent.c_str());
-			dump_sigspec(f, cell->getPort(ID::Y));
+			dump_sigspec(f, cell->getPort(ID::Y), true);
 			f << stringf(" <= ");
 			f << stringf("'0' when ");
 			dump_attributes(f, "", cell->attributes, ' ');
@@ -1043,7 +1043,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		}
 		if (cell->type.in(ID($reduce_xor), ID($reduce_xnor))) {
 			f << stringf("%s", indent.c_str());
-			dump_sigspec(f, cell->getPort(ID::Y));
+			dump_sigspec(f, cell->getPort(ID::Y), true);
 			f << stringf(" <= ");
 			if (cell->type == ID($reduce_xnor)) {
 				f << stringf("not (");
@@ -1078,7 +1078,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 	// IEEE 1364-2005: no sign extension done on either of the left shifts
 	if (cell->type.in(ID($shl), ID($sshl))) {
 		f << stringf("%s", indent.c_str());
-		dump_sigspec(f, cell->getPort(ID::Y));
+		dump_sigspec(f, cell->getPort(ID::Y), true);
 		f << stringf(" <= ");
 		f << stringf("std_logic_vector(");
 		f << stringf("shift_left(");
@@ -1096,7 +1096,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		// Force cast to unsigned when not sign extending
 		bool sign_extend = (cell->type == ID($sshr));
 		f << stringf("%s", indent.c_str());
-		dump_sigspec(f, cell->getPort(ID::Y));
+		dump_sigspec(f, cell->getPort(ID::Y), true);
 		f << stringf(" <= ");
 		f << stringf("std_logic_vector(");
 		f << stringf("shift_right(");
@@ -1142,7 +1142,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		// TODO: use VHDL-93 compliant syntax
 		// TODO: attributes were on port "A"
 		f << stringf("%s", indent.c_str());
-		dump_sigspec(f, cell->getPort(ID::Y));
+		dump_sigspec(f, cell->getPort(ID::Y), true);
 		f << stringf(" <= ");
 		// Unary or only if signal is a vector
 		bool need_unary_or = cell->getPort(ID::A).as_wire()->width > 1;
@@ -1303,7 +1303,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		// TODO: attribute dumping was on B
 		dump_attributes(f, "", cell->attributes, ' ');
 		f << stringf("%s", indent.c_str());
-		dump_sigspec(f, cell->getPort(ID::Y));
+		dump_sigspec(f, cell->getPort(ID::Y), true);
 		f << stringf(" <= ");
 		dump_sigspec(f, cell->getPort(ID::B));
 		f << stringf(" when ");
@@ -1321,9 +1321,10 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		 * This makes it easier to handle SigSpecs with multiple chunks
 		 * This is a deliberate break from the output of ghdl --synth
 		 *
-		 * Could use (a, b) := c & d; instead, if this is valid VHDL-93
+		 * Could use (a, b) := c & d; instead in VHDL-2008 mode?
 		 * This would require informing the concatenation generators
 		 * about whether the expression is an LHS or RHS expression
+		 * (Should be implemented already but check again before changing this)
 		 */
 		/*
 		 * TODO: remove assumption of downto
@@ -1339,7 +1340,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		dump_sigspec(a_str_stream, cell->getPort(ID::A));
 		dump_sigspec(b_str_stream, cell->getPort(ID::B));
 		dump_sigspec(s_str_stream, cell->getPort(ID::S));
-		dump_sigspec(y_str_stream, cell->getPort(ID::Y));
+		dump_sigspec(y_str_stream, cell->getPort(ID::Y), true);
 		std::string a_str, b_str, s_str, y_str;
 		a_str = a_str_stream.str();
 		b_str = b_str_stream.str();
@@ -1429,7 +1430,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 	if (cell->type == ID($tribuf))
 	{
 		f << stringf("%s", indent.c_str());
-		dump_sigspec(f, cell->getPort(ID::Y));
+		dump_sigspec(f, cell->getPort(ID::Y), true);
 		f << stringf(" <= ");
 		dump_sigspec(f, cell->getPort(ID::A));
 		f << stringf(" when ");
@@ -1457,7 +1458,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 	if (cell->type == ID($concat))
 	{
 		f << stringf("%s", indent.c_str());
-		dump_sigspec(f, cell->getPort(ID::Y));
+		dump_sigspec(f, cell->getPort(ID::Y), true);
 		f << stringf(" <= ");
 		dump_sigspec(f, cell->getPort(ID::B));
 		f << stringf(" & ");
@@ -1697,7 +1698,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		// Group inside process for readability
 		if (!out_is_reg_wire) {
 			f << stringf("%s  ", indent.c_str());
-			dump_sigspec(f, ff.sig_q);
+			dump_sigspec(f, ff.sig_q, true);
 			f << stringf(" <= %s;\n", reg_name.c_str());
 		}
 
