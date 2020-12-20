@@ -37,7 +37,7 @@
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
 
-bool std08, verbose, norename, noattr, attr2comment, noexpr, nodec, nohex, nostr, extmem, siminit, simple_lhs;
+bool std08, verbose, norename, noattr, attr2comment, noexpr, nodec, nohex, nostr, extmem, siminit, nosimple_lhs;
 int auto_name_counter, auto_name_offset, auto_name_digits, extmem_counter;
 std::map<RTLIL::IdString, int> auto_name_map;
 std::set<RTLIL::IdString> reg_wires;
@@ -456,7 +456,7 @@ void dump_sigchunk(std::ostream &f, const RTLIL::SigChunk &chunk, bool no_decima
 	}
 }
 
-void dump_sigspec(std::ostream &f, const RTLIL::SigSpec &sig)
+void dump_sigspec(std::ostream &f, const RTLIL::SigSpec &sig, bool lhs_mode=false)
 { // PORTING NEEDS TESTING
 	if (GetSize(sig) == 0) {
 		// TODO this is a null range that may not be handled correctly
@@ -466,10 +466,17 @@ void dump_sigspec(std::ostream &f, const RTLIL::SigSpec &sig)
 	if (sig.is_chunk()) {
 		dump_sigchunk(f, sig.as_chunk());
 	} else {
+		// LHS mode is for the LHS of expressions like (a, b) <= c in VHDL-2008 mode
+		if (lhs_mode) {
+			f << stringf("(");
+		}
 		for (auto it = sig.chunks().rbegin(); it != sig.chunks().rend(); ++it) {
 			if (it != sig.chunks().rbegin())
-				f << stringf(" & ");
+				f << stringf(lhs_mode ? ", " : " & ");
 			dump_sigchunk(f, *it, true);
+		}
+		if (lhs_mode) {
+			f << stringf(")");
 		}
 	}
 }
@@ -1851,7 +1858,11 @@ void dump_cell(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 
 void dump_conn(std::ostream &f, std::string indent, const RTLIL::SigSpec &left, const RTLIL::SigSpec &right)
 { // PORTING NEEDS TESTING
-	if (simple_lhs) {
+	/*
+	 * Split LHS of connection by default
+	 * Use VHDL-2008 style concatenation with -nosimple-lhs and -std08
+	 */
+	if (!(nosimple_lhs && std08)) {
 		int offset = 0;
 		for (auto &chunk : left.chunks()) {
 			f << stringf("%s", indent.c_str());
@@ -1863,7 +1874,7 @@ void dump_conn(std::ostream &f, std::string indent, const RTLIL::SigSpec &left, 
 		}
 	} else {
 		f << stringf("%s", indent.c_str());
-		dump_sigspec(f, left);
+		dump_sigspec(f, left, true);
 		f << stringf(" <= ");
 		dump_sigspec(f, right);
 		f << stringf(";\n");
@@ -2235,8 +2246,8 @@ struct VHDLBackend : public Backend {
 		log("        deactivates this feature and instead will write string constants\n");
 		log("        as binary numbers.\n");
 		log("\n");
-		log("    -simple-lhs\n");
-		log("        Connection assignments with simple left hand side without concatenations.\n");
+		log("    -nosimple-lhs\n");
+		log("        Connection assignments with simple left hand side with concatenations. Only allowed with -std08.\n");
 		log("\n");
 		log("    -extmem\n");
 		log("        instead of initializing memories using assignments to individual\n");
@@ -2283,7 +2294,7 @@ struct VHDLBackend : public Backend {
 		nostr = false;
 		extmem = false;
 		siminit = false;
-		simple_lhs = false;
+		nosimple_lhs = false;
 		auto_prefix = "n";
 
 		bool blackboxes = false;
@@ -2348,8 +2359,8 @@ struct VHDLBackend : public Backend {
 				selected = true;
 				continue;
 			}
-			if (arg == "-simple-lhs") {
-				simple_lhs = true;
+			if (arg == "-nosimple-lhs") {
+				nosimple_lhs = true;
 				continue;
 			}
 			if (arg == "-v") {
@@ -2367,6 +2378,9 @@ struct VHDLBackend : public Backend {
 		}
 		if (auto_prefix.length() == 0) {
 			log_cmd_error("Prefix specified by -renameprefix must not be empty.\n");
+		}
+		if (nosimple_lhs && !std08) {
+			log_cmd_error("-nosimple-lhs is only allowed with -std08.\n");
 		}
 
 		design->sort();
