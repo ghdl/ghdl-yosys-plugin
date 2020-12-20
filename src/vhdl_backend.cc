@@ -901,7 +901,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 	if (cell->type == ID($_NOT_)) {
 		f << stringf("%s", indent.c_str());
 		dump_sigspec(f, cell->getPort(ID::Y));
-		f << stringf(" = ");
+		f << stringf(" <= ");
 		f << stringf("not ");
 		dump_attributes(f, "", cell->attributes, ' ');
 		dump_cell_expr_port(f, cell, "A", false);
@@ -912,7 +912,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 	if (cell->type.in(ID($_AND_), ID($_NAND_), ID($_OR_), ID($_NOR_), ID($_XOR_), ID($_XNOR_), ID($_ANDNOT_), ID($_ORNOT_))) {
 		f << stringf("%s", indent.c_str());
 		dump_sigspec(f, cell->getPort(ID::Y));
-		f << stringf(" = ");
+		f << stringf(" <= ");
 		if (cell->type.in(ID($_NAND_), ID($_NOR_), ID($_XNOR_)))
 			f << stringf("not (");
 		dump_cell_expr_port(f, cell, "A", false);
@@ -939,7 +939,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		dump_attributes(f, "", cell->attributes, ' ');
 		f << stringf("%s", indent.c_str());
 		dump_sigspec(f, cell->getPort(ID::Y));
-		f << stringf(" = ");
+		f << stringf(" <= ");
 		dump_cell_expr_port(f, cell, "B", false);
 		f << stringf(" when ");
 		dump_cell_expr_port(f, cell, "S", false);
@@ -954,7 +954,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		dump_attributes(f, "", cell->attributes, ' ');
 		f << stringf("%s" "assign ", indent.c_str());
 		dump_sigspec(f, cell->getPort(ID::Y));
-		f << stringf(" = !(");
+		f << stringf(" <= !(");
 		dump_cell_expr_port(f, cell, "B", false);
 		f << stringf(" when ");
 		dump_cell_expr_port(f, cell, "S", false);
@@ -967,7 +967,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 	if (cell->type.in(ID($_AOI3_), ID($_OAI3_))) {
 		f << stringf("%s", indent.c_str());
 		dump_sigspec(f, cell->getPort(ID::Y));
-		f << stringf(" = not ((");
+		f << stringf(" <= not ((");
 		dump_cell_expr_port(f, cell, "A", false);
 		f << stringf(cell->type == ID($_AOI3_) ? " and " : " or ");
 		dump_cell_expr_port(f, cell, "B", false);
@@ -982,7 +982,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 	if (cell->type.in(ID($_AOI4_), ID($_OAI4_))) {
 		f << stringf("%s", indent.c_str());
 		dump_sigspec(f, cell->getPort(ID::Y));
-		f << stringf(" = not ((");
+		f << stringf(" <= not ((");
 		dump_cell_expr_port(f, cell, "A", false);
 		f << stringf(cell->type == ID($_AOI4_) ? " and " : " or ");
 		dump_cell_expr_port(f, cell, "B", false);
