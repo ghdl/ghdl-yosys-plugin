@@ -1602,12 +1602,12 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 				f << stringf(") then\n");
 				// ff.ce_over_srst means sync-reset is also gated by enable
 				if (ff.has_srst && ff.has_en && ff.ce_over_srst) {
-					f << stringf("%s" "    if (", indent.c_str());
-					f << stringf("%s then\n", sigbit_equal_bool(ff.sig_en.as_bit(), ff.pol_en).c_str());
+					f << stringf("%s" "    if", indent.c_str());
+					f << stringf(" %s then\n", sigbit_equal_bool(ff.sig_en.as_bit(), ff.pol_en).c_str());
 					//dump_sigspec(f, ff.sig_en);
 					//f << stringf(" = '%c' then\n", ff.pol_en ? '1' : '0');
-					f << stringf("%s" "      if (", indent.c_str());
-					f << stringf("%s then\n", sigbit_equal_bool(ff.sig_srst.as_bit(), ff.pol_srst).c_str());
+					f << stringf("%s" "      if", indent.c_str());
+					f << stringf(" %s then\n", sigbit_equal_bool(ff.sig_srst.as_bit(), ff.pol_srst).c_str());
 					//dump_sigspec(f, ff.sig_srst);
 					//f << stringf(" = '%c' then\n", ff.pol_srst ? '1' : '0');
 					f << stringf("%s" "        %s %s ", indent.c_str(), reg_bit_name.c_str(), assignment_operator.c_str());
@@ -1616,6 +1616,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 					f << stringf("%s" "      else\n", indent.c_str());
 					f << stringf("%s" "        %s %s ", indent.c_str(), reg_bit_name.c_str(), assignment_operator.c_str());
 					dump_sigspec(f, sig_d);
+					f << stringf(";\n");
 					f << stringf("%s" "      end if;\n", indent.c_str());
 					f << stringf("%s" "    end if;\n", indent.c_str());
 				} else {
@@ -1636,6 +1637,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 						//f << stringf(") then\n");
 					}
 					if (ff.has_srst || ff.has_en) {
+						f << stringf("%s" "    else\n", indent.c_str());
 						f << stringf("%s" "      %s %s ", indent.c_str(), reg_bit_name.c_str(), assignment_operator.c_str());
 						dump_sigspec(f, sig_d);
 						f << stringf(";\n");
