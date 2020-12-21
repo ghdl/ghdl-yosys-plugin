@@ -481,6 +481,26 @@ void dump_sigspec(std::ostream &f, const RTLIL::SigSpec &sig, bool lhs_mode=fals
 	}
 }
 
+/*
+ * Returns a string of the form "chunk_1, chunk_2, chunk_3"
+ * Intended use is populating process sensitivity lists
+ * Assumes that set is from get_sensitivity_set, i.e. no constant chunks
+ */
+std::string process_sensitivity_str(std::set<RTLIL::SigChunk> chunks)
+{
+	bool is_first_element = true;
+	std::stringstream result_gather;
+	for (RTLIL::SigChunk sigchunk: chunks) {
+		if (is_first_element) {
+			is_first_element = false;
+		} else {
+			result_gather << ", ";
+		}
+		dump_sigchunk(result_gather, sigchunk);
+	}
+	return result_gather.str();
+}
+
 void dump_attributes(std::ostream &f, std::string indent, dict<RTLIL::IdString, RTLIL::Const> &attributes, bool modattr = false, bool regattr = false, bool as_comment = false)
 { // PORTING REQUIRED
 	if (noattr)
@@ -1360,16 +1380,8 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 			get_sensitivity_set({cell->getPort(ID::A),
 				cell->getPort(ID::B),
 				cell->getPort(ID::S)});
-		f << stringf("%s" "process(", indent.c_str());
-		bool is_first_sensitivity_chunk = true;
-		for (RTLIL::SigChunk chunk: sensitivities) {
-			if (!is_first_sensitivity_chunk) {
-				f << ", ";
-			}
-			dump_sigchunk(f, chunk);
-			is_first_sensitivity_chunk = false;
-		}
-		f << stringf(") is\n");
+		f << stringf("%s" "process(%s) is\n",
+				indent.c_str(), process_sensitivity_str(sensitivities).c_str());
 		f << stringf("%s" "  variable %s: std_logic_vector(%d downto 0);\n",
 			indent.c_str(), a_var_str.c_str(), width-1);
 		f << stringf("%s" "  variable %s: std_logic_vector(%d downto 0);\n",
@@ -1512,16 +1524,8 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		} else if (ff.has_arst) {
 			sensitivity_set.insert(ff.sig_arst);
 		}
-		f << stringf("%s" "process(", indent.c_str());
-		bool is_first_sensitivity_chunk = true;
-		for (RTLIL::SigChunk chunk: get_sensitivity_set(sensitivity_set)) {
-			if (!is_first_sensitivity_chunk) {
-				f << ", ";
-			}
-			dump_sigchunk(f, chunk);
-			is_first_sensitivity_chunk = false;
-		}
-		f << stringf(") is\n");
+		f << stringf("%s" "process(%s) is\n", indent.c_str(),
+				process_sensitivity_str(get_sensitivity_set(sensitivity_set)).c_str());
 
 		if (!out_is_reg_wire) {
 			if (ff.width == 1)
