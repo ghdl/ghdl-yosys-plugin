@@ -62,7 +62,7 @@ yosys-config --exec ln -s "$GHDL_PREFIX/lib/ghdl_yosys.so" --datdir/plugins/ghdl
 
 ```makefile
 ENABLE_GHDL := 1
-GHDL_DIR := <ghdl install dir>
+GHDL_PREFIX := <ghdl install dir>
 ```
 
 - Build and install Yosys.
