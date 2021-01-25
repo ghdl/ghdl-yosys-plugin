@@ -355,17 +355,31 @@ static void set_src(std::vector<RTLIL::Wire *> &net_map, Net n, Wire *wire)
 	net_map[n.id] = wire;
 }
 
+//  Create a value from an attribute
+static RTLIL::Const build_attribute_val(Attribute attr)
+{
+	RTLIL::Const cst = pval_to_const(get_attribute_pval(attr));
+	if (get_attribute_type(attr) == Param_Pval_String)
+		cst.flags |= RTLIL::CONST_FLAG_STRING;
+	return cst;
+
+}
+
+//  Create the identifier of an attribute
+static IdString build_attribute_id(Attribute attr)
+{
+	return IdString('\\' + string(get_cstr(get_attribute_name(attr))));
+}
+
 //  Convert attributes of INST to OBJ.
 static void add_attributes (RTLIL::AttrObject &obj, Instance inst)
 {
 	Attribute attr = get_first_attribute (inst);
 
 	while (attr.id != 0) {
-		RTLIL::Const cst = pval_to_const(get_attribute_pval(attr));
-		IdString id = IdString('\\' + string(get_cstr(get_attribute_name(attr))));
-		if (get_attribute_type(attr) == Param_Pval_String)
-			cst.flags |= RTLIL::CONST_FLAG_STRING;
-		obj.attributes[id] = cst;
+		IdString id = build_attribute_id(attr);
+		obj.attributes[id] = build_attribute_val(attr);
+
 		attr = get_attribute_next(attr);
 	}
 }
