@@ -31,6 +31,8 @@ USING_YOSYS_NAMESPACE
 
 using namespace GhdlSynth;
 
+static Name_Id nameid_gclk = {0};
+
 // Convert an Sname_User to a string.  Deals with extended names
 // Subroutine of to_str
 static std::string user_to_str(Name_Id id)
@@ -581,6 +583,26 @@ static void add_formal_input(RTLIL::Module *module, std::vector<RTLIL::Wire *> &
 	cell->setPort("\\Y", get_src(net_map, n));
 }
 
+static bool has_attribute_gclk(Net n)
+{
+	Instance inst = get_net_parent(n);
+	switch(get_id(inst)) {
+        case Id_Signal:
+	case Id_Isignal:
+		break;
+	default:
+		return false;
+	}
+
+	Attribute attr = get_first_attribute (inst);
+	while (attr.id != 0) {
+		if (get_attribute_name(attr).id == nameid_gclk.id)
+			return true;
+		attr = get_attribute_next(attr);
+	}
+	return false;
+}
+
 static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 {
 	Instance self_inst = get_self_instance (m);
@@ -761,6 +783,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			break;
 		case Id_Signal:
 		case Id_Isignal:
+			break;
 		case Id_Output:
 		case Id_Port:
 		case Id_Const_UB32:
@@ -791,6 +814,43 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			              to_str(get_instance_name(inst)).c_str(),
 			              to_str(get_module_name(get_module(inst))).c_str());
 			return;
+		}
+	}
+
+	//  Add attributes and names on wires.
+	for (Instance inst = get_first_instance(m);
+	     is_valid(inst);
+	     inst = get_next_instance(inst)) {
+		GhdlSynth::Module im = get_module(inst);
+		Module_Id id = get_id(im);
+		switch (id) {
+		case Id_Signal:
+		case Id_Isignal:
+		{
+			Net s = get_input_net(inst, 0);
+			RTLIL::Wire *w;
+			//  The wire may have been created for an output
+			if (!is_set(net_map, s))
+				break;
+			w = net_map.at(s.id);
+
+			 /* Do not rename ports.  */
+			if (w && !w->port_input && !w->port_output) {
+				Sname iname = get_instance_name(inst);
+				module->rename(w, to_str(iname));
+			}
+
+			//  Attributes
+			for (Attribute attr = get_first_attribute (inst);
+			     attr.id != 0;
+			     attr = get_attribute_next(attr)) {
+				IdString id = build_attribute_id(attr);
+				w->attributes[id] = build_attribute_val(attr);
+			}
+			break;
+		}
+		default:
+			break;
 		}
 	}
 
@@ -965,8 +1025,13 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Dff:
 		case Id_Idff:
 			{
-				Net clk = get_input_net(inst, 0);
-				module->addDff(to_str(iname), extract_clk_sig(net_map, clk), IN(1), OUT(0), extract_clk_pol(clk) == RTLIL::State::S1);
+				Net edge_clk = get_input_net(inst, 0);
+				Net clk = get_input_net(get_net_parent(edge_clk), 0);
+				RTLIL::SigSpec sig_clk = get_src(net_map, clk);
+				if (has_attribute_gclk(clk))
+					module->addFf(to_str(iname), IN(1), OUT(0));
+				else
+					module->addDff(to_str(iname), sig_clk, IN(1), OUT(0), extract_clk_pol(edge_clk) == RTLIL::State::S1);
 				//  For idff, the initial value is set on the output wire.
 				if (id == Id_Idff) {
 					net_map[get_output(inst, 0).id]->attributes["\\init"] = IN(2).as_const();
@@ -1036,17 +1101,6 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			break;
 		case Id_Signal:
 		case Id_Isignal:
-			{
-				// No cell is created for Id_Signal or Id_Isignal.
-				// But try to keep the name.
-				Net sig = get_input_net(inst, 0);
-				if (is_set(net_map, sig)) {
-					Wire *w = net_map.at(sig.id);
-					/* Do not rename ports.  */
-					if (w && !w->port_input && !w->port_output)
-						module->rename(w, to_str(iname));
-				}
-			}
 			break;
 		case Id_Output:
 		case Id_Port:
@@ -1233,6 +1287,9 @@ struct GhdlPass : public Pass {
 			if (!is_valid(top)) {
 				log_cmd_error("vhdl import failed.\n");
 			}
+			//  For the gclk attribute.
+			nameid_gclk = get_identifier("gclk");
+
 			import_netlist(design, top);
 		}
 	}
