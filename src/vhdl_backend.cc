@@ -549,7 +549,7 @@ void dump_wire(std::ostream &f, std::string indent, RTLIL::Wire *wire)
 
 // We split Verilog backend's dump_memory into two functions
 void dump_memory_types(std::ostream &f, std::string indent, Mem &mem)
-{ // PORTING NEEDS TESTING
+{ // PORTING COMPLETE
 	size_t is_element_present = memory_array_types.count(mem.width);
 	std::string memory_type_name = stringf("array_type_%d",mem.width);
 	if (!is_element_present) {
