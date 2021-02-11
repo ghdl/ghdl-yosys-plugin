@@ -1479,16 +1479,58 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		return true;
 	}
 
+	// TODO: handle LUT1's
 	if (cell->type == ID($lut))
-	{ // unported for now
-		f << stringf("%s" "assign ", indent.c_str());
-		dump_sigspec(f, cell->getPort(ID::Y));
-		f << stringf(" = ");
-		dump_const(f, cell->parameters.at(ID::LUT));
-		f << stringf(" >> ");
-		dump_attributes(f, "", cell->attributes, ' ');
-		dump_sigspec(f, cell->getPort(ID::A));
+	{
+		// Assumes that ID::LUT param is downto (but matches techlib model)
+		// ghdl --synth for a LUT is unknown as it gets expanded into $mux es
+
+		std::string lut_const_name = stringf("LUTstr_%s",id(cell->name).c_str());
+		// Encapsulate LUT constant with process, which is otherwise unnecessary
+		SigSpec a_port = cell->getPort(ID::A);
+		Const lut_const = cell->parameters.at(ID::LUT);
+		// TODO: fix handling of width 1 LUT input
+		int lut_width = lut_const.size();
+		f << stringf("%s" "process (%s) is\n", indent.c_str(),
+				process_sensitivity_str(get_sensitivity_set(a_port)).c_str());
+		f << stringf("%s" "  constant %s: STD_LOGIC_VECTOR(%d downto 0) := ",
+				indent.c_str(), lut_const_name.c_str(), lut_width-1);
+		// offset=default, no_decimal=true
+		dump_const(f, lut_const, lut_width, 0, true);
 		f << stringf(";\n");
+
+		f << stringf("%s" "begin\n", indent.c_str());
+		f << stringf("%s  ", indent.c_str());
+		dump_sigspec(f, cell->getPort(ID::Y), true);
+		f << stringf(" <= ");
+		dump_attributes(f, "", cell->attributes, ' ');
+		f << lut_const_name;
+		// Outermost parentheses are indexing wrapper
+		f << stringf("(to_integer(");
+
+		/*
+		 * Use a qualified expression for std_logic concats
+		 * If all elements are non-array type, the aggregate has ambiguous type
+		 * Qualified expressions are defined in IEEE 1076-2008 5.2.1
+		 * Concatenation return types are defined in IEEE 1076-2008 9.2.5
+		 * TODO: concatenation qualified expr may need to be used elsewhere
+		 */
+		bool use_qualified_expr = true;
+		for (auto it = a_port.chunks().rbegin();
+				it != a_port.chunks().rend();
+				it++) {
+			if (it->width > 1) {
+				use_qualified_expr = false;
+			}
+		}
+		if (use_qualified_expr) {
+			f << stringf("unsigned'(");
+		} else {
+			f << stringf("unsigned(");
+		}
+		dump_sigspec(f, a_port);
+		f << stringf(")));\n");
+		f << stringf("%s" "end process;\n", indent.c_str());
 		return true;
 	}
 
