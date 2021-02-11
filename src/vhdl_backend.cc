@@ -1720,7 +1720,7 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 				cell->type.c_str()+1);
 			log("PSL unclocked directives do not work (yet) with GHDL\n");
 		}
-		log_experimental("Formal cells as asserts/PSL comments");
+		log_experimental("Formal cells as PSL comments");
 		std::stringstream en_sstream;
 		std::stringstream a_sstream; // Not actually arbitrary haha
 		string en_str;
@@ -1740,11 +1740,21 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		// TODO: special handling for asserts of x->'1'?
 		if (cell->type == ID($assert)) {
 			if (en_const_on) {
-				f << stringf("%s" "assert %s;\n", indent.c_str(),
-						a_str.c_str());
+				if (std08) {
+					f << stringf("%s" "assert %s;\n", indent.c_str(),
+							a_str.c_str());
+				} else {
+					f << stringf("%s" "assert %s = '1';\n", indent.c_str(),
+							a_str.c_str());
+				}
 			} else {
-				f << stringf("%s" "assert (not %s) or %s;", indent.c_str(),
-						en_str.c_str(), a_str.c_str());
+				if (std08) {
+					f << stringf("%s" "assert ((not %s) or %s) = '1';",
+						indent.c_str(), en_str.c_str(), a_str.c_str());
+				} else {
+					f << stringf("%s" "assert (not %s) or %s;", indent.c_str(),
+							en_str.c_str(), a_str.c_str());
+				}
 				f << stringf(" -- %s -> %s\n", en_str.c_str(), a_str.c_str());
 			}
 		} else {
