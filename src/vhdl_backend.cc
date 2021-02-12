@@ -467,6 +467,11 @@ void dump_sigspec(std::ostream &f, const RTLIL::SigSpec &sig, bool lhs_mode=fals
 		dump_sigchunk(f, sig.as_chunk());
 	} else {
 		// LHS mode is for the LHS of expressions like (a, b) <= c in VHDL-2008 mode
+		if (lhs_mode && !std08) {
+			// TODO: this is only a warning because other codegen stuff is still generating 2008 syntax outside of VHDL-2008 mode
+			// This should be converted into an error once that is fixed
+			log_warning("%s","dump_sigspec called for multi-chunk LHS output when not in VHDL-2008 mode\n");
+		}
 		if (lhs_mode) {
 			f << stringf("(");
 		}
