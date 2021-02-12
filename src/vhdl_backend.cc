@@ -1671,32 +1671,28 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 					f << stringf("%s" "      end if;\n", indent.c_str());
 					f << stringf("%s" "    end if;\n", indent.c_str());
 				} else {
-					// Commented out stuff was broken
-					if (ff.has_srst) {
-						f << stringf("%s" "    if ", indent.c_str());
-						f << stringf("%s then\n", sigbit_equal_bool(ff.sig_srst.as_bit(), ff.pol_srst).c_str());
-						//dump_sigspec(f, ff.sig_srst);
-						//f << stringf(" then\n");
-						f << stringf("%s" "      %s %s ", indent.c_str(), reg_bit_name.c_str(), assignment_operator.c_str());
-						dump_sigspec(f, val_srst);
+					if (!ff.has_srst && !ff.has_en) {
+						f << stringf("%s" "    %s %s ", indent.c_str(), reg_bit_name.c_str(), assignment_operator.c_str());
+						dump_sigspec(f, sig_d);
 						f << stringf(";\n");
-					}
-					if (ff.has_en) {
-						f << stringf("%s" "    %s ", indent.c_str(), ff.has_srst ? "elsif" : "if");
-						f << stringf("%s then\n", sigbit_equal_bool(ff.sig_en.as_bit(), ff.pol_en).c_str());
-						//dump_sigspec(f, ff.sig_en);
-						//f << stringf(") then\n");
-					}
-					if (ff.has_srst || ff.has_en) {
-						f << stringf("%s" "    else\n", indent.c_str());
+					} else {
+						if (ff.has_srst) {
+							f << stringf("%s" "    if ", indent.c_str());
+							f << stringf("%s then\n", sigbit_equal_bool(ff.sig_srst.as_bit(), ff.pol_srst).c_str());
+							f << stringf("%s" "      %s %s ", indent.c_str(), reg_bit_name.c_str(), assignment_operator.c_str());
+							dump_sigspec(f, val_srst);
+							f << stringf(";\n");
+						}
+						if (ff.has_en) {
+							f << stringf("%s" "    %s ", indent.c_str(), ff.has_srst ? "elsif" : "if");
+							f << stringf("%s then\n", sigbit_equal_bool(ff.sig_en.as_bit(), ff.pol_en).c_str());
+						} else {
+							f << stringf("%s" "    else\n", indent.c_str());
+						}
 						f << stringf("%s" "      %s %s ", indent.c_str(), reg_bit_name.c_str(), assignment_operator.c_str());
 						dump_sigspec(f, sig_d);
 						f << stringf(";\n");
 						f << stringf("%s" "    end if;\n", indent.c_str());
-					} else {
-						f << stringf("%s" "    %s %s ", indent.c_str(), reg_bit_name.c_str(), assignment_operator.c_str());
-						dump_sigspec(f, sig_d);
-						f << stringf(";\n");
 					}
 				}
 				f << stringf("%s" "  end if;\n", indent.c_str());
