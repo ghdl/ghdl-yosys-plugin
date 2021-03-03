@@ -20,6 +20,7 @@
  * A VHDL backend based on the Verilog backend.
  * Code structure here is regularly synced with the Verilog backend, except where noted
  * Last synced against Yosys 871fc34a
+ * The commit above references the last commit that changed the Verilog backend
  */
 
 #include "kernel/register.h"
@@ -1098,6 +1099,8 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 	 * 
 	 * Avoid using built-in operators sll, sla, srl, sra, rol, and rar
 	 * See https://jdebp.eu/FGA/bit-shifts-in-vhdl.html for explanation
+	 * New link via Wayback Machine as webpage is now down:
+	 * http://web.archive.org/web/20200214191101/https://jdebp.eu/FGA/bit-shifts-in-vhdl.html
 	 */
 
 	// IEEE 1364-2005: no sign extension done on either of the left shifts
@@ -1930,6 +1933,7 @@ void dump_conn(std::ostream &f, std::string indent, const RTLIL::SigSpec &left, 
 	/*
 	 * Split LHS of connection by default
 	 * Use VHDL-2008 style concatenation with -nosimple-lhs and -std08
+	 * TODO: any reason to bother with -nosimple-hls and not just split?
 	 */
 	if (!(nosimple_lhs && std08)) {
 		int offset = 0;
