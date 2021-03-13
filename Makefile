@@ -8,8 +8,7 @@ GIT_VERSION = '$(GIT_VERSION_RAW)'
 YOSYS_CONFIG=yosys-config
 SOEXT=so
 
-LDFLAGS=
-CFLAGS=-O
+CFLAGS ?= -O
 
 LIBGHDL_LIB:=$(shell $(GHDL) --libghdl-library-path)
 LIBGHDL_INC:=$(shell $(GHDL) --libghdl-include-dir)
