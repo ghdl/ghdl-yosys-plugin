@@ -633,7 +633,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 	std::vector<Instance> memories;
 
 	if (!is_valid(self_inst)) { // blackbox
-		module->set_bool_attribute("\\blackbox");
+		module->set_bool_attribute(ID::blackbox);
 
 		Port_Idx nbr_inputs = get_nbr_inputs(m);
 		for (Port_Idx idx = 0; idx < nbr_inputs; idx++) {
@@ -766,6 +766,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 				}
 			}
 			break;
+		case Id_Output:
 		case Id_Inout:
 		case Id_Iinout:
 			//  The wire was created when the port was.
@@ -784,7 +785,6 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Signal:
 		case Id_Isignal:
 			break;
-		case Id_Output:
 		case Id_Port:
 		case Id_Const_UB32:
 		case Id_Const_SB32:
@@ -841,12 +841,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			}
 
 			//  Attributes
-			for (Attribute attr = get_first_attribute (inst);
-			     attr.id != 0;
-			     attr = get_attribute_next(attr)) {
-				IdString id = build_attribute_id(attr);
-				w->attributes[id] = build_attribute_val(attr);
-			}
+			add_attributes(*w, inst);
 			break;
 		}
 		default:
@@ -1198,6 +1193,15 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		wire->width = get_width(output_out);
 
 		module->connect(wire, get_src(net_map, output_out));
+
+		Instance inst = get_net_parent(output_out);
+		switch(get_id(inst)) {
+		case Id_Output:
+			add_attributes(*wire, inst);
+			break;
+		default:
+			break;
+		}
 	}
 
 	module->fixup_ports();
