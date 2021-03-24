@@ -433,6 +433,8 @@ static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net
 	unsigned nbr_wr = 0;
 	unsigned width = 0;
 	unsigned abits = 0;
+	unsigned r_a_w = 0; // Write after read
+	unsigned w_a_r = 0; // Read after write
 	for (Input port = first_port; ;) {
 		Instance port_inst = get_input_parent(port);
 		Net addr;
@@ -443,11 +445,15 @@ static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net
 			dat = get_output(port_inst, 1);
 			addr = get_input_net(port_inst, 1);
 			nbr_rd++;
+			if (nbr_wr)
+			  r_a_w++;
 			break;
 		case Id_Mem_Wr_Sync:
 			dat = get_input_net(port_inst, 4);
 			addr = get_input_net(port_inst, 1);
 			nbr_wr++;
+			if (nbr_rd)
+			  w_a_r++;
 			break;
 		case Id_Memory:
 		case Id_Memory_Init:
@@ -469,6 +475,8 @@ static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net
 		}
 		port = get_first_sink(get_output(port_inst,  0));
 	}
+	if (w_a_r && r_a_w)
+		log_warning("memory %s has read ports after and before write ports", mem_str.c_str());
 
 	unsigned size = get_width(mem_o) / width;
 	memory->width = width;
@@ -559,7 +567,7 @@ static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net
 #undef OUT
 	mem->parameters["\\RD_CLK_ENABLE"] = nbr_rd ? Const(rd_clk_en) : Const(RTLIL::State::S0);
 	mem->parameters["\\RD_CLK_POLARITY"] = nbr_rd ? Const(rd_clk_pol) : Const(RTLIL::State::S1);
-	mem->parameters["\\RD_TRANSPARENT"] = Const(RTLIL::State::S0, nbr_rd ? nbr_rd : 1);
+	mem->parameters["\\RD_TRANSPARENT"] = Const(r_a_w ? RTLIL::State::S1 : RTLIL::State::S0, nbr_rd ? nbr_rd : 1);
 
 	mem->setPort("\\RD_CLK", rd_clk);
 	mem->setPort("\\RD_ADDR", rd_addr);
