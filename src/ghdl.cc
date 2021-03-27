@@ -420,13 +420,6 @@ static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net
 	//  Memories appear only once.
 	log_assert(!is_set(net_map, mem_o));
 
-	//  Create memory.
-	RTLIL::Memory *memory = new RTLIL::Memory;
-	memory->name = "$mem$" + mem_str;
-
-	//  Add it to module.
-	module->memories[memory->name] = memory;
-
 	//  Count number of read and write ports.
 	//  Extract width, size, abits.
 	unsigned nbr_rd = 0;
@@ -479,9 +472,6 @@ static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net
 		log_warning("memory %s has read ports after and before write ports", mem_str.c_str());
 
 	unsigned size = get_width(mem_o) / width;
-	memory->width = width;
-	memory->size = size;
-	memory->start_offset = 0;
 
 	//  Create the memory.
 	Cell *mem = module->addCell(mem_str, "$mem");
