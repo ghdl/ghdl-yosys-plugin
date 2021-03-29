@@ -1,0 +1,16 @@
+[tasks]
+bmc
+
+[options]
+bmc: mode bmc
+bmc: depth 10
+
+[engines]
+smtbmc z3
+
+[script]
+ghdl --std=08 wbr_ram.vhd -e wbr_ram
+prep -top wbr_ram
+
+[files]
+wbr_ram.vhd
