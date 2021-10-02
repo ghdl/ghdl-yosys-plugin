@@ -26,17 +26,37 @@ do_plugin () {
 gstart "[Build] ghdl/synth:beta" "$ANSI_MAGENTA"
 
 docker build -t ghdl/synth:beta . -f- <<-EOF
-FROM ghdl/cache:yosys-gnat AS build
-COPY --from=ghdl/pkg:buster-mcode / /opt/ghdl
+ARG REGISTRY='gcr.io/hdl-containers/debian/bullseye'
+
+#---
+
+# WORKAROUND: this is required because 'COPY --from' does not support ARGs
+FROM \$REGISTRY/pkg/ghdl AS pkg-ghdl
+
+FROM \$REGISTRY/yosys AS base
+
+RUN apt-get update -qq \
+ && DEBIAN_FRONTEND=noninteractive apt-get -y install --no-install-recommends \
+    libgnat-9 \
+ && apt-get autoclean && apt-get clean && apt-get -y autoremove \
+ && rm -rf /var/lib/apt/lists
+
+COPY --from=pkg-ghdl /ghdl /
+
+#---
+
+FROM base AS build
+
 COPY . /ghdlsynth
 
-RUN cp -vr /opt/ghdl/* /usr/local \
- && cd /ghdlsynth \
+RUN cd /ghdlsynth \
  && make \
- && cp ghdl.so /opt/ghdl/lib/ghdl_yosys.so
+ && cp ghdl.so /tmp/ghdl_yosys.so
 
-FROM ghdl/cache:yosys-gnat
-COPY --from=build /opt/ghdl /usr/local
+#---
+
+FROM base
+COPY --from=build /tmp/ghdl_yosys.so /usr/local/lib/
 RUN yosys-config --exec mkdir -p --datdir/plugins \
  && yosys-config --exec ln -s /usr/local/lib/ghdl_yosys.so --datdir/plugins/ghdl.so
 EOF
