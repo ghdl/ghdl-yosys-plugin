@@ -179,8 +179,6 @@ static RTLIL::SigSpec get_src_extract(std::vector<RTLIL::Wire *> &net_map, Net n
 {
 	Instance inst = get_net_parent(n);
 	switch(get_id(inst)) {
-        case Id_Signal:
-	case Id_Isignal:
 	case Id_Port:
         case Id_Output:
                 return get_src_extract(net_map, get_input_net(inst, 0), off, wd);
@@ -213,8 +211,6 @@ static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n)
 	Instance inst = get_net_parent(n);
 	switch(get_id(inst)) {
 #define IN(N) get_src(net_map, get_input_net(inst, (N)))
-	case Id_Signal:
-	case Id_Isignal:
 	case Id_Port:
 	case Id_Output:
 		return IN(0);
@@ -751,6 +747,8 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Mem_Rd:
 		case Id_Mem_Rd_Sync:
 		case Id_Tri:
+		case Id_Signal:
+		case Id_Isignal:
 		case Id_Resolver:
 		case Id_User_None:
 		case Id_User_Parameters:
@@ -779,9 +777,6 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Memory_Init:
 		case Id_Mem_Wr_Sync:
 			//  Handled by import_memory.
-			break;
-		case Id_Signal:
-		case Id_Isignal:
 			break;
 		case Id_Port:
 		case Id_Const_UB32:
@@ -1094,6 +1089,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			break;
 		case Id_Signal:
 		case Id_Isignal:
+			module->connect(OUT (0), IN (0));
 			break;
 		case Id_Output:
 		case Id_Port:
