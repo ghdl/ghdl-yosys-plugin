@@ -5,23 +5,39 @@ set -e
 cd "$(dirname $0)"
 . ./utils.sh
 
-# To build latest GHDL from sources, uncomment the following block
-# and replace --from=ghdl/pkg:buster-mcode below with --from=tmp
+#--
 
-#docker build -t tmp - <<-EOF
-#FROM ghdl/build:buster-mcode
-#RUN apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get -y install --no-install-recommends \
-#    ca-certificates curl && update-ca-certificates \
-# && mkdir -p ghdl && cd ghdl \
-# && curl -fsSL "$GHDL_URL" | tar xzf - --strip-components=1 \
-# && ./configure --enable-libghdl --enable-synth \
-# && make all \
-# && make DESTDIR=/opt/ghdl install
-#EOF
+do_ghdl () {
+
+gstart "[Build] tmp" "$ANSI_MAGENTA"
+
+docker build -t tmp - <<-EOF
+FROM ghdl/build:bullseye-mcode AS build
+RUN apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get -y install --no-install-recommends \
+    ca-certificates \
+    git \
+ && update-ca-certificates \
+ && git clone https://github.com/ghdl/ghdl \
+ && cd ghdl \
+ && ./configure --enable-libghdl --enable-synth \
+ && make all \
+ && make DESTDIR=/opt/ghdl install
+ FROM scratch
+ COPY --from=build /opt/ghdl /ghdl
+EOF
+
+export GHDL_PKG_IMAGE=tmp
+
+gend
+
+}
 
 #--
 
 do_plugin () {
+
+# To build latest GHDL from sources, uncomment the following line and replace --from=pkg-ghdl below with --from=tmp
+#do_ghdl
 
 gstart "[Build] ghdl/synth:beta" "$ANSI_MAGENTA"
 
@@ -41,7 +57,7 @@ RUN apt-get update -qq \
  && apt-get autoclean && apt-get clean && apt-get -y autoremove \
  && rm -rf /var/lib/apt/lists
 
-COPY --from=pkg-ghdl /ghdl /
+COPY --from=${GHDL_PKG_IMAGE:-pkg-ghdl} /ghdl /
 
 #---
 
@@ -70,6 +86,7 @@ gend
 do_formal () {
 
 gstart "[Build] ghdl/synth:formal" "$ANSI_MAGENTA"
+
 docker build -t ghdl/synth:formal . -f- <<-EOF
 ARG REGISTRY='gcr.io/hdl-containers/debian/bullseye'
 
@@ -90,7 +107,8 @@ RUN apt-get update -qq \
  && apt-get autoclean && apt-get clean && apt-get -y autoremove \
  && rm -rf /var/lib/apt/lists/*
 EOF
-gend "formal"
+
+gend
 
 }
 
