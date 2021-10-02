@@ -12,15 +12,7 @@
 
 **This is experimental and work in progress!** See [ghdl.github.io/ghdl: Using/Synthesis](http://ghdl.github.io/ghdl/using/Synthesis.html).
 
-- [Build as a module](#build-as-a-module-shared-library)
-- [Build as part of Yosys](#build-as-part-of-yosys-not-recommended)
-- [Pre-built packages](#pre-built-packages)
-- [Usage](#Usage)
-- [Containers](#Containers)
-
 > TODO: Create table with features of VHDL that are supported, WIP and pending.
-
----
 
 ## Build as a module (shared library)
 
