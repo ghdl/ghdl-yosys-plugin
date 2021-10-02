@@ -36,7 +36,7 @@ gend
 
 do_plugin () {
 
-# To build latest GHDL from sources, uncomment the following line and replace --from=pkg-ghdl below with --from=tmp
+# To build latest GHDL from sources, uncomment the following line
 #do_ghdl
 
 gstart "[Build] ghdl/synth:beta" "$ANSI_MAGENTA"
