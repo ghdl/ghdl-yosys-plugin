@@ -51,10 +51,18 @@ do_formal () {
 
 gstart "[Build] ghdl/synth:formal" "$ANSI_MAGENTA"
 docker build -t ghdl/synth:formal . -f- <<-EOF
-FROM hdlc/ghdl:yosys
+ARG REGISTRY='gcr.io/hdl-containers/debian/bullseye'
 
-COPY --from=hdlc/pkg:z3 /z3 /
-COPY --from=hdlc/pkg:symbiyosys /symbiyosys /
+#--
+
+# WORKAROUND: this is required because 'COPY --from' does not support ARGs
+FROM \$REGISTRY/pkg/z3 AS pkg-z3
+FROM \$REGISTRY/pkg/symbiyosys AS pkg-symbiyosys
+
+FROM ghdl/synth:beta
+
+COPY --from=pkg-z3 /z3 /
+COPY --from=pkg-symbiyosys /symbiyosys /
 
 RUN apt-get update -qq \
  && DEBIAN_FRONTEND=noninteractive apt-get -y install --no-install-recommends \
