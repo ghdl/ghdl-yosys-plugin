@@ -1272,6 +1272,11 @@ struct GhdlPass : public Pass {
 
 		if (args.size() == 2 && args[1] == "--disp-config") {
 			ghdlcomp__disp_config();
+			log("yosys plugin compiled on " __DATE__ " " __TIME__
+#ifdef GHDL_VER_HASH
+			    ", git hash:" GHDL_VER_HASH
+#endif
+			    "\n");
 		}
 		else {
 			int cmd_argc = args.size() - 1;
