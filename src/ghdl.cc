@@ -747,21 +747,35 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Mem_Rd:
 		case Id_Mem_Rd_Sync:
 		case Id_Tri:
-		case Id_Signal:
-		case Id_Isignal:
 		case Id_Resolver:
 		case Id_User_None:
 		case Id_User_Parameters:
 			for (Port_Idx idx = 0; idx < get_nbr_outputs(im); idx++) {
 				Net o = get_output(inst, idx);
-				//  The wire may have been created for an output
-				if (!is_set(net_map, o)) {
-					RTLIL::Wire *wire =
-						module->addWire(NEW_ID, get_width(o));
-					set_src(net_map, o, wire);
-				}
+				//  The wire may have been created for a module output
+				if (is_set(net_map, o))
+					continue;
+				RTLIL::Wire *wire =
+					module->addWire(NEW_ID, get_width(o));
+				set_src(net_map, o, wire);
 			}
 			break;
+		case Id_Signal:
+		case Id_Isignal: {
+		        Net s = get_output(inst, 0);
+
+			//  The wire may have been created for a module output
+			if (is_set(net_map, s))
+				break;
+			Sname iname = get_instance_name(inst);
+			RTLIL::Wire *wire =
+				module->addWire(to_str(iname), get_width(s));
+			set_src(net_map, s, wire);
+
+			//  Attributes
+			add_attributes(*wire, inst);
+			break;
+		}
 		case Id_Output:
 		case Id_Inout:
 		case Id_Iinout:
@@ -807,38 +821,6 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			              to_str(get_instance_name(inst)).c_str(),
 			              to_str(get_module_name(get_module(inst))).c_str());
 			return;
-		}
-	}
-
-	//  Add attributes and names on wires.
-	for (Instance inst = get_first_instance(m);
-	     is_valid(inst);
-	     inst = get_next_instance(inst)) {
-		GhdlSynth::Module im = get_module(inst);
-		Module_Id id = get_id(im);
-		switch (id) {
-		case Id_Signal:
-		case Id_Isignal:
-		{
-			Net s = get_input_net(inst, 0);
-			RTLIL::Wire *w;
-			//  The wire may have been created for an output
-			if (!is_set(net_map, s))
-				break;
-			w = net_map.at(s.id);
-
-			 /* Do not rename ports.  */
-			if (w && !w->port_input && !w->port_output) {
-				Sname iname = get_instance_name(inst);
-				module->rename(w, to_str(iname));
-			}
-
-			//  Attributes
-			add_attributes(*w, inst);
-			break;
-		}
-		default:
-			break;
 		}
 	}
 
