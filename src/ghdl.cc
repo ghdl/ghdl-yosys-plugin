@@ -482,9 +482,16 @@ static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net
 	case Id_Memory:
 		init_data = Const(State::Sx, size * width);
 		break;
-	case Id_Memory_Init:
-		init_data = get_src(net_map, get_input_net(inst, 1)).as_const();
+	case Id_Memory_Init: {
+		// The input cannot be a signal, so read signal input.
+		Net iinp = get_input_net(inst, 1);
+		Instance iinst = get_net_parent(iinp);
+		Module_Id imod = get_id(iinst);
+		if (imod == Id_Signal || imod == Id_Isignal)
+			iinp = get_input_net(iinst, 0);
+		init_data = get_src(net_map, iinp).as_const();
 		break;
+	}
 	default:
 		log_assert(0);
 	}
