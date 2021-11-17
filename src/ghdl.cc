@@ -369,17 +369,20 @@ static IdString build_attribute_id(Attribute attr)
 	return IdString('\\' + string(get_cstr(get_attribute_name(attr))));
 }
 
-//  Convert attributes of INST to OBJ.
-static void add_attributes (RTLIL::AttrObject &obj, Instance inst)
+static void add_attributes_chain(RTLIL::AttrObject &obj, Attribute attr)
 {
-	Attribute attr = get_first_attribute (inst);
-
 	while (attr.id != 0) {
 		IdString id = build_attribute_id(attr);
 		obj.attributes[id] = build_attribute_val(attr);
 
 		attr = get_attribute_next(attr);
 	}
+}
+
+//  Convert attributes of INST to OBJ.
+static void add_attributes_from_instance(RTLIL::AttrObject &obj, Instance inst)
+{
+	add_attributes_chain(obj, get_first_attribute (inst));
 }
 
 //  Extract the polarity from net N (output of an edge gate).
@@ -500,7 +503,7 @@ static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net
 	mem->parameters["\\RD_PORTS"] = Const(nbr_rd);
 
 	//  Set attributes.
-	add_attributes(*mem, inst);
+	add_attributes_from_instance(*mem, inst);
 
 	//  Connect.
 	SigSpec rd_clk;
@@ -642,6 +645,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 				to_str(get_input_name(m, idx)),
 				get_input_width(m, idx));
 			wire->port_input = true;
+                        add_attributes_chain(*wire, get_first_input_port_attribute(m, idx));
 		}
 		Port_Idx nbr_outputs = get_nbr_outputs(m);
 		for (Port_Idx idx = 0; idx < nbr_outputs; idx++) {
@@ -651,7 +655,8 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			if (get_inout_flag(m, idx))
 				wire->port_input = true;
 			wire->port_output = true;
-		}
+                        add_attributes_chain(*wire, get_first_output_port_attribute(m, idx));
+                }
 		Param_Idx nbr_params = get_nbr_params(m);
 		for (Param_Idx idx = 0; idx < nbr_params; idx++) {
 			module->avail_parameters(to_str(get_param_name(m, idx)));
@@ -673,6 +678,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		wire->port_input = true;
 		wire->width = get_width(port);
 		set_src(net_map, port, wire);
+                add_attributes_chain(*wire, get_first_input_port_attribute(m, idx));
 	}
 	//  Create inout ports, so that they can be read.
 	Port_Idx nbr_outputs = get_nbr_outputs(m);
@@ -689,6 +695,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		wire->port_output = true;
 		wire->port_input = true;
 		wire->width = get_width(output_out);
+                add_attributes_chain(*wire, get_first_output_port_attribute(m, idx));
 
 		Instance inout_inst = get_net_parent(output_out);
 		Net inout_rd = get_output(inout_inst, 0);
@@ -780,7 +787,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			set_src(net_map, s, wire);
 
 			//  Attributes
-			add_attributes(*wire, inst);
+			add_attributes_from_instance(*wire, inst);
 			break;
 		}
 		case Id_Output:
@@ -1174,13 +1181,14 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		wire->port_id = nbr_inputs + idx + 1;
 		wire->port_output = true;
 		wire->width = get_width(output_out);
+                add_attributes_chain(*wire, get_first_output_port_attribute(m, idx));
 
 		module->connect(wire, get_src(net_map, output_out));
 
 		Instance inst = get_net_parent(output_out);
 		switch(get_id(inst)) {
 		case Id_Output:
-			add_attributes(*wire, inst);
+			add_attributes_from_instance(*wire, inst);
 			break;
 		default:
 			break;
