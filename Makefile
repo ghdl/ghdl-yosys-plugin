@@ -32,4 +32,6 @@ install: ghdl.$(SOEXT)
 	$(YOSYS_CONFIG) --exec mkdir -p --datdir/plugins
 	$(YOSYS_CONFIG) --exec cp $< --datdir/plugins
 
+-include src/ghdl.d
+
 force:
