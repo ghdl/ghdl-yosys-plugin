@@ -12,7 +12,7 @@ LIBGHDL_LIB:=$(shell $(GHDL) --libghdl-library-path)
 LIBGHDL_INC:=$(shell $(GHDL) --libghdl-include-dir)
 
 ALL_LDFLAGS=$(LIBGHDL_LIB) -Wl,-rpath,$(dir $(LIBGHDL_LIB)) $(LDFLAGS)
-DATDIR:=$(shell $(YOSYS_CONFIG) --datdir)
+PLUGINDIR:=$(shell $(YOSYS_CONFIG) --datdir)/plugins
 
 ALL_CFLAGS=-fPIC -DYOSYS_ENABLE_GHDL -I$(LIBGHDL_INC) $(CFLAGS)
 
@@ -30,8 +30,8 @@ clean: force
 	$(RM) -f ghdl.$(SOEXT) ghdl.o
 
 install: ghdl.$(SOEXT)
-	$(YOSYS_CONFIG) --exec mkdir -p $(DESTDIR)$(DATDIR)/plugins
-	$(YOSYS_CONFIG) --exec cp $< $(DESTDIR)$(DATDIR)/plugins
+	$(YOSYS_CONFIG) --exec mkdir -p $(DESTDIR)$(PLUGINDIR)
+	$(YOSYS_CONFIG) --exec cp $< $(DESTDIR)$(PLUGINDIR)
 
 -include src/ghdl.d
 
