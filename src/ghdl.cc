@@ -757,6 +757,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Idff:
 		case Id_Adff:
 		case Id_Iadff:
+		case Id_Dlatch:
 		case Id_Eq:
 		case Id_Ne:
 		case Id_Ult:
@@ -1088,6 +1089,9 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 					net_map[get_output(inst, 0).id]->attributes[ID::init] = IN(4).as_const();
 				}
 			}
+			break;
+		case Id_Dlatch:
+			module->addDlatch(to_str(iname), IN(1), IN(0), OUT(0));
 			break;
 		case Id_User_None:
 		case Id_User_Parameters:
