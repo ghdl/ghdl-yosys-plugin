@@ -563,7 +563,7 @@ static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net
                         vec.resize(nbr_wr);
 			// Emitted write ports (ie j <= widx) don't have priority.
                         for (int j = 0; j < nbr_wr; j++)
-                                vec[j] = j <= widx ? RTLIL::State::S0 : RTLIL::State::S1;
+                                vec[j] = j < widx ? RTLIL::State::S1 : RTLIL::State::S0;
                         p->parameters[ID::PRIORITY_MASK] = Const(vec);
                         break;
 		default:
