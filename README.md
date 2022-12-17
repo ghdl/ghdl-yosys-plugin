@@ -5,7 +5,7 @@
   -->
   <a title="Docker Images" href="https://github.com/ghdl/docker"><img src="https://img.shields.io/docker/pulls/ghdl/synth.svg?logo=docker&logoColor=e8ecef&style=flat-square&label=docker"></a><!--
   -->
-  <a title="'push' workflow Status" href="https://github.com/ghdl/ghdl-yosys-plugin/actions?query=workflow%3Apush"><img alt="'push' workflow Status" src="https://img.shields.io/github/workflow/status/ghdl/ghdl-yosys-plugin/push?longCache=true&style=flat-square&label=push&logo=Github%20Actions&logoColor=fff"></a>
+  <a title="'push' workflow Status" href="https://github.com/ghdl/ghdl-yosys-plugin/actions/workflows/push.yml"><img alt="'push' workflow Status" src="https://img.shields.io/github/actions/workflow/status/ghdl/ghdl-yosys-plugin/push.yml?branch=master&longCache=true&style=flat-square&label=push&logo=Github%20Actions&logoColor=fff"></a>
 </p>
 
 # ghdl-yosys-plugin: VHDL synthesis (based on [GHDL](https://github.com/ghdl/ghdl) and [Yosys](https://github.com/YosysHQ/yosys))
