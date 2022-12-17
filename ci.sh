@@ -104,8 +104,10 @@ COPY --from=pkg-symbiyosys /symbiyosys /
 RUN apt-get update -qq \
  && DEBIAN_FRONTEND=noninteractive apt-get -y install --no-install-recommends \
     python3 \
+    python3-pip \
  && apt-get autoclean && apt-get clean && apt-get -y autoremove \
- && rm -rf /var/lib/apt/lists/*
+ && rm -rf /var/lib/apt/lists/*\
+ && python3 -m pip install click --progress-bar off
 EOF
 
 gend
