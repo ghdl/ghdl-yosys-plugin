@@ -1,0 +1,20 @@
+[tasks]
+compare
+cover
+
+[options]
+compare: mode bmc
+cover: mode cover
+depth 100
+
+[engines]
+smtbmc z3
+
+[script]
+read_verilog synth_psl_p_plus.v
+ghdl --std=08 compare_psl_p_plus.vhdl -e compare_psl_p_plus
+prep -top compare_psl_p_plus
+
+[files]
+synth_psl_p_plus.v
+compare_psl_p_plus.vhdl

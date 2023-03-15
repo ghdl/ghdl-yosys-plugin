@@ -1,0 +1,12 @@
+ghdl --std=08 psl_p_plus.vhdl -e psl_p_plus
+
+flatten
+rename -enumerate -pattern unnamed_assert_% t:$assert
+rename -enumerate -pattern unnamed_assume_% t:$assume
+rename -enumerate -pattern unnamed_cover_% t:$cover
+
+expose -evert t:$assert t:$assume t:$cover
+
+opt
+
+write_verilog synth_psl_p_plus.v
