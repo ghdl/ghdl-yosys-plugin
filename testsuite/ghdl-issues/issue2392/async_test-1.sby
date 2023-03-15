@@ -1,0 +1,22 @@
+[tasks]
+prove
+bmc
+cover
+
+[options]
+bmc: mode bmc
+cover: mode cover
+prove: mode bmc
+depth 50
+
+[engines]
+smtbmc z3
+
+[script]
+ghdl --std=08 dut.vhdl tb_dut-1.vhdl -e tb_dut
+prep -top tb_dut
+
+[files]
+dut.vhdl
+tb_dut-1.vhdl
+
