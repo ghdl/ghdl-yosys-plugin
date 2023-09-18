@@ -36,6 +36,10 @@ run_yosys ()
 
 run_symbiyosys ()
 {
+    if ! command -v $SYMBIYOSYS >/dev/null; then
+         echo>&2 "Warning: sby unavailable, remaining tests skipped"
+         exit
+    fi
     cmd $SYMBIYOSYS --yosys "$YOSYS" "$@"
 }
 
