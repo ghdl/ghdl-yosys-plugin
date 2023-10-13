@@ -1246,6 +1246,12 @@ static void import_netlist(RTLIL::Design *design, GhdlSynth::Module top)
 	}
 }
 
+extern "C" void libghdl__set_hooks_for_analysis(void);
+extern "C" int libghdl__set_option(const char* opt, int len);
+extern "C" int libghdl__analyze_init_status();
+extern "C" int libghdl__analyze_file(const char* file, int len);
+extern "C" void libraries__save_work_library(void);
+
 #endif /* YOSYS_ENABLE_GHDL */
 
 YOSYS_NAMESPACE_BEGIN
@@ -1255,13 +1261,11 @@ struct GhdlPass : public Pass {
 	virtual void help()
 	{
 		//   |---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|
-#if 0
 		log("\n");
 		log("    ghdl -a [OPTIONS] <vhdl-file>..\n");
 		log("\n");
 		log("Analyze the specified VHDL files.\n");
 		log("\n");
-#endif
 		log("\n");
 		log("    ghdl [options] unit [arch]\n");
 		log("\n");
@@ -1300,10 +1304,10 @@ struct GhdlPass : public Pass {
 		if (!lib_initialized) {
 			lib_initialized = 1;
 			libghdl_init ();
-			ghdlsynth__init_for_ghdl_synth();
 		}
 
 		if (args.size() == 2 && args[1] == "--disp-config") {
+			ghdlsynth__init_for_ghdl_synth();
 			ghdlcomp__disp_config();
 			log("yosys plugin compiled on " __DATE__ " " __TIME__
 #ifdef GHDL_VER_HASH
@@ -1311,7 +1315,31 @@ struct GhdlPass : public Pass {
 #endif
 			    "\n");
 		}
+		else if (args.size() > 1 && args[1] == "-a") {
+			libghdl__set_hooks_for_analysis();
+
+			size_t arg = 2;
+			for (; arg < args.size() && args[arg][0] == '-'; ++arg) {
+				if (libghdl__set_option(args[arg].c_str(), args[arg].size()) != 0) {
+					log_cmd_error("set option (%s) failed.\n", args[arg].c_str());
+				}
+			}
+
+			if (libghdl__analyze_init_status() != 0) {
+				log_cmd_error("analyze init failed.\n");
+			}
+
+			for (; arg < args.size(); ++arg) {
+				if (libghdl__analyze_file(args[arg].c_str(), args[arg].size()) == 0) {
+					log_cmd_error("analyze file (%s) failed.\n", args[arg].c_str());
+				}
+			}
+
+			libraries__save_work_library();
+		}
 		else {
+			ghdlsynth__init_for_ghdl_synth();
+
 			int cmd_argc = args.size() - 1;
 			const char **cmd_argv = new const char *[cmd_argc];
 			for (int i = 0; i < cmd_argc; i++)
