@@ -1,0 +1,24 @@
+[tasks]
+bmc
+prove_1
+prove_2
+
+[options]
+bmc: mode bmc
+depth 20
+prove_1: mode prove
+prove_1: depth 7
+prove_2: mode prove
+prove_2: depth 7
+
+[engines]
+smtbmc boolector
+prove_1: smtbmc boolector
+prove_2: smtbmc yices
+
+[script]
+ghdl --std=08 prove_01b.vhdl -e prove_01
+prep -top prove_01
+
+[files]
+prove_01b.vhdl
