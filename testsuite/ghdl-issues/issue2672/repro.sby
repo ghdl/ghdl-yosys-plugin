@@ -6,7 +6,7 @@ prove_1: mode prove
 prove_1: depth 7
 
 [engines]
-prove_1: smtbmc boolector
+prove_1: smtbmc z3
 
 [script]
 ghdl --std=08 repro.vhdl -e
