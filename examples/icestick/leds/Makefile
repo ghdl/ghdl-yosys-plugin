@@ -1,4 +1,8 @@
-PROJ = blink
+
+USE_DOCKER?=
+
+# choose one project to build
+PROJ ?= blink
 #PROJ = fixed1
 #PROJ = multi1
 #PROJ = multi2
@@ -9,26 +13,15 @@ PROJ = blink
 #PROJ = spin1
 #PROJ = spin2
 
-PIN_DEF = leds.pcf
+TOPLEVEL ?= leds
+
+VHDL_SYN_FILES = leds.vhdl ./*.vhdl
+
+PCF_DEF = leds.pcf
+PACKAGE = tq144
+
+PLATFORM = ice40
 DEVICE = hx1k
 
-all: $(PROJ).bin
-
-%.json: leds.vhdl %.vhdl
-	yosys -m ghdl -p 'ghdl $^ -e leds; synth_ice40 -json $@'
-
-%.asc: %.json
-	nextpnr-ice40 --package $(DEVICE) --pcf $(PIN_DEF) --json $< --asc $@
-
-%.bin: %.asc
-	icepack $< $@
-
-prog: $(PROJ).bin
-	iceprog $<
-
-clean:
-	rm -f $(PROJ).json $(PROJ).asc $(PROJ).bin
-
-.SECONDARY:
-
-.PHONY: all prog clean
+include ../../tools.mk
+include ../../common.mk
