@@ -65,6 +65,15 @@ Some projects provide pre-built packages including GHDL, Yosys and ghdl-yosys-pl
 
 - On Windows, there is a package group in [MSYS2](https://www.msys2.org/) repositories named [mingw-w64-x86_64-eda](https://packages.msys2.org/group/mingw-w64-x86_64-eda)|[mingw-w64-i686-eda](https://packages.msys2.org/group/mingw-w64-i686-eda). See [hdl/MINGW-packages](https://github.com/hdl/MINGW-packages).
 
+- On GNU/Linux, the [guix-science](https://codeberg.org/guix-science/guix-science) [guix](https://guix.gnu.org/) channel provides binaries for both ghdl and ghdl-yosys-plugin
+
+```sh
+guix install ghdl-clang ghdl-yosys-plugin
+
+# use it as
+alias yosys='yosys -m ~/.guix-profile/lib/yosys/ghdl.so'
+```
+
 ## Usage
 
 Example for IceStick, using GHDL, Yosys, nextpnr and icestorm:
