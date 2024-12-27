@@ -42,7 +42,7 @@ do_plugin () {
 gstart "[Build] ghdl/synth:beta" "$ANSI_MAGENTA"
 
 docker build -t ghdl/synth:beta . -f- <<-EOF
-ARG REGISTRY='gcr.io/hdl-containers/debian/bullseye'
+ARG REGISTRY='ghcr.io/hdl/debian/bullseye'
 
 #---
 
@@ -88,7 +88,7 @@ do_formal () {
 gstart "[Build] ghdl/synth:formal" "$ANSI_MAGENTA"
 
 docker build -t ghdl/synth:formal . -f- <<-EOF
-ARG REGISTRY='gcr.io/hdl-containers/debian/bullseye'
+ARG REGISTRY='ghcr.io/hdl/debian/bullseye'
 
 #--
 
