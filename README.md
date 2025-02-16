@@ -16,8 +16,6 @@
 
 ## Build as a module (shared library)
 
-> On Windows, Yosys does not support loading modules dynamically. Therefore, this build approach is not possible. See [*Build as part of Yosys*](#build-as-part-of-yosys-not-recommended) below.
-
 - Get and install [Yosys](https://github.com/YosysHQ/yosys).
 - Get sources, build and install [GHDL](https://github.com/ghdl/ghdl). Ensure that GHDL is configured with synthesis features (enabled by default since v0.37). See [Building GHDL](https://github.com/ghdl/ghdl#building-ghdl).
 
