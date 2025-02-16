@@ -59,7 +59,7 @@ GHDL_PREFIX := <ghdl install dir>
 
 ## Pre-built packages
 
-Some projects provide pre-built packages including GHDL, Yosys and ghdl-yosys-plugin. Unless you have specific requirements (targeting a different arch, OS, build options...), we suggest using one of the following solutions before building ghdl-yosys-plugin from sources.
+Some projects provide pre-built packages including GHDL, Yosys. Unless you have specific requirements (targeting a different arch, OS, build options...), we suggest using one of the following solutions before building ghdl-yosys-plugin from sources.
 
 - On Windows, there is a package group in [MSYS2](https://www.msys2.org/) repositories named [mingw-w64-x86_64-eda](https://packages.msys2.org/group/mingw-w64-x86_64-eda)|[mingw-w64-i686-eda](https://packages.msys2.org/group/mingw-w64-i686-eda). See [hdl/MINGW-packages](https://github.com/hdl/MINGW-packages).
 
