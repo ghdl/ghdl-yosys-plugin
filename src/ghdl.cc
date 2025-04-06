@@ -793,6 +793,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Anyseq:
 		case Id_Mem_Rd:
 		case Id_Mem_Rd_Sync:
+		case Id_Dyn_Extract:
 		case Id_Tri:
 		case Id_Resolver:
 		case Id_User_None:
@@ -1093,6 +1094,14 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Dlatch:
 			module->addDlatch(to_str(iname), IN(1), IN(0), OUT(0));
 			break;
+		case Id_Dyn_Extract: {
+			unsigned off = get_param_uns32(inst, 0);
+			RTLIL::SigSpec inp = IN(0);
+			inp = inp.extract(off, inp.size() - off);
+			//  Use bmux instead ?
+			module->addShiftx(to_str(iname), inp, IN(1), OUT(0));
+			break;
+		}
 		case Id_User_None:
 		case Id_User_Parameters:
 			{
