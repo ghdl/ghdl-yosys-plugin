@@ -1313,6 +1313,7 @@ struct GhdlPass : public Pass {
 		}
 
 		if (args.size() == 2 && args[1] == "--disp-config") {
+			ghdlmain__disp_ghdl_version();
 			ghdlcomp__disp_config();
 			log("yosys plugin compiled on " __DATE__ " " __TIME__
 #ifdef GHDL_VER_HASH
