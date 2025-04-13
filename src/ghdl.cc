@@ -753,6 +753,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Mux2:
 		case Id_Mux4:
 		case Id_Pmux:
+		case Id_Bmux:
 		case Id_Dff:
 		case Id_Idff:
 		case Id_Adff:
@@ -1040,6 +1041,9 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			    module->addPmux(to_str(iname), IN(1), b, s, OUT(0));
 			}
 			break;
+		case Id_Bmux:
+			module->addBmux(to_str(iname), IN(0), IN(1), OUT(0));
+			break;
 		case Id_Dff:
 		case Id_Idff:
 			{
@@ -1098,7 +1102,6 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			unsigned off = get_param_uns32(inst, 0);
 			RTLIL::SigSpec inp = IN(0);
 			inp = inp.extract(off, inp.size() - off);
-			//  Use bmux instead ?
 			module->addShiftx(to_str(iname), inp, IN(1), OUT(0));
 			break;
 		}
