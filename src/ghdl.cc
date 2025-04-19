@@ -60,34 +60,51 @@ static std::string user_to_str(Name_Id id)
 			return string(s);
 		len++;
 	}
+	//  Nothing special in this extended name, un-extend it.
 	return string(s + 1, len - 1);
+}
+
+static std::string to_str_1(Sname name)
+{
+	std::string res;
+
+	log_assert(is_valid(name));
+
+	switch (get_sname_kind(name)) {
+	case Sname_System:
+		return '$' + user_to_str(get_sname_suffix(name));
+	case Sname_Unique:
+		return ':' + stringf("%u", get_sname_version(name));
+	case Sname_Version: 
+		//  Use ':' for versions.  '%' is not supported by Xilinx ISE edif2ngc.
+		//  ('$' is boring with tcl scripts)
+		return to_str_1(get_sname_prefix(name)) + ':' + stringf("%u", get_sname_version(name));
+	case Sname_Field:
+		return to_str_1(get_sname_prefix(name)) + '[' + user_to_str(get_sname_suffix(name)) + ']';
+	case Sname_User: {
+		Sname pfx = get_sname_prefix(name);
+		std::string s = user_to_str(get_sname_suffix(name));
+		if (is_valid(pfx))
+			return to_str_1(pfx) + '.' + s;
+		else
+			return s;
+	}
+	default:
+		log_abort();
+	}
 }
 
 //  Convert an Sname to a string.
 static std::string to_str(Sname name)
 {
-	std::string res;
-	bool is_sys = false;
-
 	log_assert(is_valid(name));
 
-	for (Sname pfx = name; is_valid(pfx); pfx = get_sname_prefix(pfx)) {
-		switch (get_sname_kind(pfx)) {
-		case Sname_Artificial:
-			is_sys = true;
-			// fallthrough
-		case Sname_User:
-			res = '.' + user_to_str(get_sname_suffix(pfx)) + res;
-			break;
-		case Sname_Version:
-			//  Use ':' for versions.  '%' is not supported by Xilinx ISE edif2ngc.
-			//  ('$' is boring with tcl scripts)
-			res = ':' + stringf("%u", get_sname_version(pfx)) + res;
-			break;
-		}
+	switch (get_sname_kind(name)) {
+	case Sname_System:
+		return to_str_1(name);
+	default:
+		return '\\' + to_str_1(name);
 	}
-	res[0] = is_sys ? '$' : '\\';
-	return res;
 }
 
 //  Get the corresponding wire for net N (or null if not found).
