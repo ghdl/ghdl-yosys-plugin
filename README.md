@@ -66,7 +66,7 @@ Some projects provide pre-built packages including GHDL, Yosys. Unless you have 
 - On GNU/Linux, the [guix-science](https://codeberg.org/guix-science/guix-science) [guix](https://guix.gnu.org/) channel provides binaries for both ghdl and ghdl-yosys-plugin
 
 ```sh
-guix install ghdl-clang ghdl-yosys-plugin
+guix install ghdl-llvm ghdl-yosys-plugin
 
 # use it as
 alias yosys='yosys -m ~/.guix-profile/lib/yosys/ghdl.so'
