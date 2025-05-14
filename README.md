@@ -135,3 +135,22 @@ iceprog leds.bin
 See [hdl/containers](https://github.com/hdl/containers) for further info about containers including other EDA tools.
 
 > NOTE: on GNU/Linux, it should be possible to use board programming tools through `hdlc/icestorm`. On Windows and macOS, accessing USB/COM ports of the host from containers is challenging. Therefore, board programming tools need to be available on the host. Windows users can find several board programming tools available as [MSYS2](https://www.msys2.org/) packages. See [mingw-w64-x86_64-eda](https://packages.msys2.org/group/mingw-w64-x86_64-eda)|[mingw-w64-i686-eda](https://packages.msys2.org/group/mingw-w64-i686-eda) and [hdl/MINGW-packages](https://github.com/hdl/MINGW-packages).
+
+## Guix containers
+
+As an alternative, [guix](https://guix.gnu.org/) on the fly [shells](https://guix.gnu.org/manual/devel/en/html_node/Invoking-guix-shell.html), provide custom, disposable containers.
+
+Synthesis with Yosys:
+
+```sh
+YS='ghdl leds.vhdl spin1.vhdl -e leds; synth_ice40 -json leds.json'
+MODULE='~/.guix-profile/lib/yosys/ghdl.so'
+
+guix shell -CP ghdl-yosys-plugin -- yosys -m $MODULE -p $YS
+```
+
+P&R the design with [nextpnr](https://github.com/YosysHQ/nextpnr) and generate a bitstream with [icestorm](https://github.com/cliffordwolf/icestorm) tools:
+
+```sh
+guix shell -C nextpnr icestorm -- nextpnr-ice40 --hx1k --json leds.json --pcf leds.pcf --asc leds.asc && icepack leds.asc leds.bin
+```
