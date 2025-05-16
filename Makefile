@@ -21,7 +21,7 @@ VER_HASH=$(shell git rev-parse --short HEAD || echo "unknown")
 all: ghdl.$(SOEXT)
 
 ghdl.$(SOEXT): ghdl.o
-	$(YOSYS_CONFIG) --build $@ $< -shared $(ALL_LDFLAGS)
+	$(YOSYS_CONFIG) --exec --cxx --cxxflags --ldflags -o $@ $< -shared $(ALL_LDFLAGS)
 
 ghdl.o: src/ghdl.cc
 	$(YOSYS_CONFIG) --exec --cxx -c --cxxflags -o $@ $< $(ALL_CFLAGS) -DGHDL_VER_HASH="\"$(VER_HASH)\""
@@ -30,8 +30,8 @@ clean: force
 	$(RM) -f ghdl.$(SOEXT) ghdl.o
 
 install: ghdl.$(SOEXT)
-	$(YOSYS_CONFIG) --exec mkdir -p $(DESTDIR)$(PLUGINDIR)
-	$(YOSYS_CONFIG) --exec cp $< $(DESTDIR)$(PLUGINDIR)
+	mkdir -p $(DESTDIR)$(PLUGINDIR)
+	cp $< $(DESTDIR)$(PLUGINDIR)
 
 -include src/ghdl.d
 
