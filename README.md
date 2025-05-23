@@ -104,6 +104,14 @@ Alternatively, it is possible to analyze, elaborate and synthesize VHDL sources 
 yosys $MODULE -p 'ghdl leds.vhdl spin1.vhdl -e leds; synth_ice40 -json leds.json'
 ```
 
+Finally, one may avoid analysis of individual source files in complex projects with help of [hdlmake](https://gitlab.com/ohwr/project/hdl-make)
+
+```
+cd examples/icestick/leds/
+hdlmake -f Makefile.mk
+make -f Makefile.mk
+```
+
 ## Containers
 
 Container (aka Docker/Podman) image [`hdlc/ghdl:yosys`](https://hub.docker.com/r/hdlc/ghdl/tags) includes GHDL, Yosys and the ghdl-yosys-plugin module (shared library). These can be used to synthesize designs straightaway. For example:
