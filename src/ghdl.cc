@@ -751,6 +751,8 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		set_src(net_map, inout_rd, wire);
 	}
 
+	add_attributes_from_instance(*module, self_inst);
+
 	//  Create wires for outputs of (real) cells.
 	for (Instance inst = get_first_instance(m);
 	     is_valid(inst);
