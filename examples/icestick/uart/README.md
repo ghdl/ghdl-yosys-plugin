@@ -7,5 +7,5 @@ Configuration: 115200 8N1
 - syn: Contains the scripts and constraints for synthesis.
 
 ## Usage
-- `cd syn && ./synth.sh`
+- `make all prog`
 - configure and open putty or another serial terminal and type something
