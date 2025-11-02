@@ -20,4 +20,4 @@ VERILOG_FILES="\
 
 FREQ=25000000
 
-run_yosys -p "ghdl -gCLK_FREQUENCY=$FREQ --work=ecp5um $top/library/ecp5u/components.vhdl --work=work $VHDL_SYN_FILES -e; read_verilog $VERILOG_FILES; synth_ecp5 -top versa_ecp5_top -json top_ecp5_top.json" -l report.txt -q
+run_yosys -p "ghdl -gCLK_FREQUENCY=$FREQ --work=ecp5um --vendor-library=ecp5um $top/library/ecp5u/components.vhdl --work=work $VHDL_SYN_FILES -e; read_verilog $VERILOG_FILES; synth_ecp5 -top versa_ecp5_top -json top_ecp5_top.json" -l report.txt -q
