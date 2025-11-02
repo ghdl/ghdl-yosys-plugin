@@ -23,8 +23,7 @@ VHDL_SYN_FILES += uart.vhdl uart_tx.vhdl uart_rx.vhdl fifobuf.vhdl
 TOPLEVEL = versa_ecp5_top
 TOPLEVEL_PARAMETER =
 
-VERILOG_FILES = $(LIB)/wrapper/primitives.v
-VERILOG_FILES += $(LIB)/wrapper/bram.v
+VERILOG_FILES = $(LIB)/wrapper/bram.v
 
 SVFFILE = versa_ecp5_top.svf
 DEPENDENCIES = lib/ecp5um-std93.cf
