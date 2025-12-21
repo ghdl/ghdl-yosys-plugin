@@ -1378,6 +1378,11 @@ struct GhdlPass : public Pass {
 		log("Analyse files, elaborate unit and import it\n");
 		log("If unit is not specified, it is automatically found\n");
 		log("\n");
+		log("    ghdl -read [options] files...\n");
+		log("\n");
+		log("Load VHDL files into the current design. They are visible to the hierachy\n");
+		log("command, and can therefore be instantiated by verilog modules\n");
+		log("\n");
 		log("Full list of options are described in ghdl documentation.\n");
 		log("\n");
 		log("    --std=(93|08)\n");
