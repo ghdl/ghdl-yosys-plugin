@@ -438,7 +438,6 @@ static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net
 
 	//  Count number of read and write ports.
 	//  Extract width, size, abits.
-	int nbr_rd = 0;
 	int nbr_wr = 0;
 	unsigned width = 0;
 	unsigned abits = 0;
@@ -451,7 +450,6 @@ static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net
 		case Id_Mem_Rd_Sync:
 			dat = get_output(port_inst, 1);
 			addr = get_input_net(port_inst, 1);
-			nbr_rd++;
 			break;
 		case Id_Mem_Wr_Sync:
 			dat = get_input_net(port_inst, 4);
