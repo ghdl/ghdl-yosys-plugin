@@ -75,7 +75,7 @@ static std::string to_str_1(Sname name)
 		return '$' + user_to_str(get_sname_suffix(name));
 	case Sname_Unique:
 		return ':' + stringf("%u", get_sname_version(name));
-	case Sname_Version: 
+	case Sname_Version:
 		//  Use ':' for versions.  '%' is not supported by Xilinx ISE edif2ngc.
 		//  ('$' is boring with tcl scripts)
 		return to_str_1(get_sname_prefix(name)) + ':' + stringf("%u", get_sname_version(name));
@@ -654,7 +654,7 @@ static bool has_attribute_gclk(Net n)
 	return false;
 }
 
-static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
+static RTLIL::Module *import_module(RTLIL::Design *design, GhdlSynth::Module m)
 {
 	Instance self_inst = get_self_instance (m);
 
@@ -665,7 +665,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			//  Error message only for non-black-boxes.
 			log_cmd_error("Re-definition of module `%s'.\n", module_name.c_str());
 		}
-		return;
+		return nullptr;
 	}
 
 	RTLIL::Module *module = new RTLIL::Module;
@@ -677,7 +677,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 	//  TODO: support submodules (currently they aren't generated)
 	if (is_valid(get_first_sub_module(m))) {
 		log_cmd_error("Unsupported: submodules in `%s'.\n", module_name.c_str());
-		return;
+		return nullptr;
 	}
 
 	//  List of all memories.
@@ -710,7 +710,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		}
 
 		module->fixup_ports();
-		return;
+		return module;
 	}
 
 	//  Create input ports.
@@ -886,7 +886,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			log_cmd_error("Unsupported(1): instance %s of %s.\n",
 			              to_str(get_instance_name(inst)).c_str(),
 			              to_str(get_module_name(get_module(inst))).c_str());
-			return;
+			return nullptr;
 		}
 	}
 
@@ -1226,7 +1226,7 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			log_cmd_error("Unsupported(2): instance %s of %s.\n",
 			              to_str(get_instance_name(inst)).c_str(),
 			              to_str(get_module_name(get_module(inst))).c_str());
-			return;
+			return nullptr;
 		}
 	}
 
@@ -1261,6 +1261,8 @@ static void import_module(RTLIL::Design *design, GhdlSynth::Module m)
 	}
 
 	module->fixup_ports();
+
+	return module;
 }
 
 static void import_netlist(RTLIL::Design *design, GhdlSynth::Module top)
@@ -1273,6 +1275,81 @@ static void import_netlist(RTLIL::Design *design, GhdlSynth::Module top)
 			continue;
 		import_module(design, m);
 	}
+}
+
+struct GhdlModule : RTLIL::Module {
+	unsigned node;
+	RTLIL::IdString derive(RTLIL::Design *design, const dict<RTLIL::IdString, RTLIL::Const> &parameters, bool mayfail) override;
+};
+
+RTLIL::IdString GhdlModule::derive(RTLIL::Design *, const dict<RTLIL::IdString, RTLIL::Const> &parameters, bool)
+{
+	vector<struct Pval_Cstring_tuple> assocs;
+	GhdlSynth::Module top;
+	RTLIL::Module *module;
+
+	log("VHDL derive %s\n", this->name.c_str());
+
+	//  Convert parameters to Pval.
+	for (auto const& it : parameters) {
+		unsigned wd = it.second.size();
+		struct Pval pv;
+		struct logic_32 el;
+		if (it.second.is_fully_def())
+			pv = create_pval2(wd);
+		else
+			pv = create_pval4(wd);
+		el.va = 0;
+		el.zx = 0;
+		for (unsigned i = 0; i < wd; i++) {
+			switch(it.second[i]) {
+			case State::S0: break;
+			case State::S1: el.va |= (1 << i); break;
+			case State::Sz: el.va |= (1 << i); /* Fallthrough */
+			case State::Sx:
+			default: el.zx |= (1 << i);
+			}
+			if ((i & 0x1f) == 0x1f || i == wd - 1) {
+				write_pval(pv, i >> 5, el);
+				el.va = 0;
+				el.zx = 0;
+			}
+		}
+
+		//  Skip leading '\\' of parameter name
+		assocs.push_back({it.first.c_str() + 1, pv});
+	}
+
+	top = ghdl_synth_with_params(this->node, assocs.data(), assocs.size());
+
+	module = nullptr;
+
+	for (GhdlSynth::Module m = get_first_sub_module (top);
+	     is_valid(m);
+	     m = get_next_sub_module (m)) {
+		//  Do not try to synthesize predefined gates.
+		if (get_id (m) < Id_User_None)
+			continue;
+		//  FIXME: check only one user module is present.
+		module = import_module(design, m);
+	}
+
+	return module->name;
+}
+
+static void ghdl_read_cb(unsigned int raw_id, unsigned int node, void *arg)
+{
+	string module_name = name_table__get_address(raw_id);
+	RTLIL::Design *design = static_cast<RTLIL::Design *>(arg);
+	GhdlModule *module;
+
+	module = new GhdlModule;
+	module->name = "$abstract\\" + module_name;
+	module->node = node;
+
+	// log("Importing module %s.\n", RTLIL::id2cstr(module->name));
+
+	design->add(module);
 }
 
 #endif /* YOSYS_ENABLE_GHDL */
@@ -1341,6 +1418,17 @@ struct GhdlPass : public Pass {
 #endif
 			    "\n");
 		}
+		else if (args.size() > 1 && args[1] == "-read") {
+			int cmd_argc = args.size() - 2;
+			const char **cmd_argv = new const char *[cmd_argc];
+			for (int i = 0; i < cmd_argc; i++)
+				cmd_argv[i] = args[i + 2].c_str();
+			if (libghdl_synth__ghdl_synth_read(!work_initialized, cmd_argc, cmd_argv, ghdl_read_cb, design) < 0) {
+			  log_cmd_error("vhdl read failed.\n");
+			}
+
+			work_initialized++;
+		}
 		else {
 			int cmd_argc = args.size() - 1;
 			const char **cmd_argv = new const char *[cmd_argc];
@@ -1353,6 +1441,7 @@ struct GhdlPass : public Pass {
 			if (!is_valid(top)) {
 				log_cmd_error("vhdl import failed.\n");
 			}
+
 			//  For the gclk attribute.
 			nameid_gclk = get_identifier("gclk");
 
