@@ -1280,13 +1280,16 @@ static void import_netlist(RTLIL::Design *design, GhdlSynth::Module top)
 struct GhdlModule : RTLIL::Module {
 	unsigned node;
 	RTLIL::IdString derive(RTLIL::Design *design, const dict<RTLIL::IdString, RTLIL::Const> &parameters, bool mayfail) override;
+
+	static std::vector<RTLIL::Module *> cache;
 };
+
+std::vector<RTLIL::Module *> GhdlModule::cache;
 
 RTLIL::IdString GhdlModule::derive(RTLIL::Design *, const dict<RTLIL::IdString, RTLIL::Const> &parameters, bool)
 {
 	vector<struct Pval_Cstring_tuple> assocs;
-	GhdlSynth::Module top;
-	RTLIL::Module *module;
+	GhdlSynth::synth_instance_type *inst;
 
 	log("VHDL derive %s\n", this->name.c_str());
 
@@ -1320,21 +1323,42 @@ RTLIL::IdString GhdlModule::derive(RTLIL::Design *, const dict<RTLIL::IdString, 
 		assocs.push_back({it.first.c_str() + 1, pv});
 	}
 
-	top = ghdl_synth_with_params(this->node, assocs.data(), assocs.size());
+	inst = libghdl_synth__ghdl_synth_with_params(this->node, assocs.data(), assocs.size());
 
-	module = nullptr;
+	//  If already synthesized, reuse the module.
+	GhdlSynth::Module res = get_instance_module(inst);
+	if (res.id < cache.size()) {
+		RTLIL::Module *module = cache.at(res.id);
+		return module->name;
+	}
 
+	//  New module, to be imported (as well as its dependencies).
+	GhdlSynth::Module top = get_top_module(inst);
 	for (GhdlSynth::Module m = get_first_sub_module (top);
 	     is_valid(m);
 	     m = get_next_sub_module (m)) {
+		//  Skip if already imported.
+		if (m.id < cache.size())
+			continue;
+		
+		RTLIL::Module *module;
 		//  Do not try to synthesize predefined gates.
 		if (get_id (m) < Id_User_None)
-			continue;
-		//  FIXME: check only one user module is present.
-		module = import_module(design, m);
+			module = nullptr;
+		else {
+			//  Import
+			module = import_module(design, m);
+		}
+		//  We know module indexes are consecutive, but we don't want
+		//  to hard code the first index.
+		while (cache.size() < m.id)
+			cache.push_back(nullptr);
+		
+		cache.push_back(module);
+		log_assert(cache.size() == m.id + 1);
 	}
 
-	return module->name;
+	return cache.at(res.id)->name;
 }
 
 static void ghdl_read_cb(unsigned int raw_id, unsigned int node, void *arg)
