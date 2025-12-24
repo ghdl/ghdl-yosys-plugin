@@ -1,28 +1,18 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-entity top is
+entity xor_generic is
   generic (
-    WIDTH : integer := 4
+    WIDTH : integer := 8
   );
   port (
     a : in  std_logic_vector(WIDTH-1 downto 0);
     b : in  std_logic_vector(WIDTH-1 downto 0);
     y : out std_logic_vector(WIDTH-1 downto 0)
   );
-end entity top;
+end entity xor_generic;
 
-architecture rtl of top is
+architecture rtl of xor_generic is
 begin
-
-  u_xor : entity work.xor_generic
-    generic map (
-      WIDTH => WIDTH
-    )
-    port map (
-      a => a,
-      b => b,
-      y => y
-    );
-
+  y <= a xor b;
 end architecture rtl;
