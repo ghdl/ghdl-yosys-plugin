@@ -1325,6 +1325,10 @@ RTLIL::IdString GhdlModule::derive(RTLIL::Design *, const dict<RTLIL::IdString, 
 
 	inst = libghdl_synth__ghdl_synth_with_params(this->node, assocs.data(), assocs.size());
 
+	//  Stop now in case of error.
+	if (inst == nullptr)
+		log_error("Incorrect use of module '%s'\n", this->name);
+
 	//  If already synthesized, reuse the module.
 	GhdlSynth::Module res = get_instance_module(inst);
 	if (res.id < cache.size()) {
