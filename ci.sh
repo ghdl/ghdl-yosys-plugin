@@ -25,6 +25,7 @@ make all GNATMAKE="gnatmake -j4"
 sudo make install
 cd ..
 
+which ghdl
 ghdl --version
 
 set +x
@@ -73,8 +74,11 @@ curl -L $url | tar zxf -
 #ls
 #ls oss-cad-suite/lib
 
+set -x
+echo $PATH
 PATH=$PATH:$PWD/oss-cad-suite/bin
 
+which ghdl
 ghdl --version
 
 #echo "yosys-config output:"
@@ -82,6 +86,7 @@ ghdl --version
 #    echo -n " --$f: "
 #    yosys-config --$f
 #done
+set +x
 
 gend
 }
@@ -96,7 +101,7 @@ gstart "[Build] plugin" "$ANSI_MAGENTA"
 make LDFLAGS="$PWD/oss-cad-suite/lib/libstdc++.so.6"
 cp ghdl.so /tmp/ghdl_yosys.so
 
-#ldd ghdl.so
+ldd ghdl.so
 
 gend
 
