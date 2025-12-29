@@ -15,7 +15,7 @@ set -x
 echo "nproc: $(nproc)"
 
 sudo apt-get update
-sudo apt-get install -y --no-install-recommends gcc gnat git
+sudo apt-get install -y --no-install-recommends gcc-10 gnat-10 git
 
 git clone https://github.com/ghdl/ghdl
 cd ghdl
@@ -103,7 +103,7 @@ do_plugin ()
 gstart "[Build] plugin" "$ANSI_MAGENTA"
 
 # Need to use libstdc++ from yosys
-make LDFLAGS="$PWD/oss-cad-suite/lib/libstdc++.so.6"
+make LDFLAGS="$PWD/oss-cad-suite/lib/libstdc++.so.6 $PWD/oss-cad-suite/lib/libc.so.6"
 cp ghdl.so /tmp/ghdl_yosys.so
 
 ldd ghdl.so
