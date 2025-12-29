@@ -1,0 +1,6 @@
+ghdl adff.vhdl -e; hierarchy -auto-top; proc; memory; async2sync; rename -top gold; design -stash gold; 
+read_verilog adff.v; hierarchy -auto-top; proc; memory; async2sync; rename -top gate; design -stash gate; 
+
+design -copy-from gold -as gold gold; design -copy-from gate -as gate gate; 
+equiv_make gold gate equiv; hierarchy -top equiv; flatten; 
+equiv_simple; equiv_struct; equiv_simple; equiv_status
