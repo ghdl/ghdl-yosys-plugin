@@ -20,7 +20,7 @@ sudo apt-get install -y --no-install-recommends gcc-10 gnat-10 git
 git clone https://github.com/ghdl/ghdl
 cd ghdl
 git describe
-./configure --enable-libghdl --enable-synth LDFLAGS="$PWD/../oss-cad-suite/lib/"
+./configure --enable-libghdl --enable-synth LDFLAGS="-L$PWD/../oss-cad-suite/lib/"
 make all GNATMAKE="gnatmake -j4"
 sudo make install
 git describe
