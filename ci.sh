@@ -20,7 +20,7 @@ sudo apt-get install -y --no-install-recommends gcc-10 gnat-10 git
 git clone https://github.com/ghdl/ghdl
 cd ghdl
 git describe
-./configure --enable-libghdl --enable-synth
+./configure --enable-libghdl --enable-synth LDFLAGS="$PWD/../oss-cad-suite/lib/"
 make all GNATMAKE="gnatmake -j4"
 sudo make install
 git describe
@@ -103,10 +103,10 @@ do_plugin ()
 gstart "[Build] plugin" "$ANSI_MAGENTA"
 
 # Need to use libstdc++ from yosys
-make LDFLAGS="$PWD/oss-cad-suite/lib/libstdc++.so.6 $PWD/oss-cad-suite/lib/libc.so.6"
+make LDFLAGS="-L$PWD/oss-cad-suite/lib/"
 cp ghdl.so /tmp/ghdl_yosys.so
 
-ldd ghdl.so
+ldd -v ghdl.so
 
 gend
 
