@@ -10,6 +10,8 @@ do_ghdl ()
 {
 gstart "[Build] ghdl" "$ANSI_MAGENTA"
 
+set -x
+
 echo "nproc: $(nproc)"
 
 sudo apt-get update
@@ -17,6 +19,7 @@ sudo apt-get install -y --no-install-recommends gcc gnat git
 
 git clone https://github.com/ghdl/ghdl
 cd ghdl
+git describe
 ./configure --enable-libghdl --enable-synth
 make all GNATMAKE="gnatmake -j4"
 sudo make install
@@ -24,6 +27,7 @@ cd ..
 
 ghdl --version
 
+set +x
 gend
 }
 
