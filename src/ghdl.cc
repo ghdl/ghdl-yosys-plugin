@@ -1091,20 +1091,8 @@ static RTLIL::Module *import_module(RTLIL::Design *design, GhdlSynth::Module m)
 				// If the reset value (rval) is a constant, use a classic asynchronous dff.
 				if (rval.is_fully_const())
 					module->addAdff(to_str(iname), clk_sig, arst, d, q, rval.as_const(), clk_pol);
-				else {
-					// Otherwise, use a dffsr.
-					// set <= arst ? d : 0
-					SigSpec zero = SigSpec(RTLIL::State::S0, d.size());
-					RTLIL::Wire *set = module->addWire(NEW_ID, d.size());
-					module->addMux(NEW_ID, zero, d, arst, set);
-					//  clr <= arst ? ~d : 0
-					RTLIL::Wire *d_n = module->addWire(NEW_ID, d.size());
-					module->addNot(NEW_ID, d, d_n);
-					RTLIL::Wire *clr = module->addWire(NEW_ID, d.size());
-					module->addMux(NEW_ID, zero, d_n, arst, clr);
-					//  Use dffsr
-					module->addDffsr(to_str(iname), clk_sig, set, clr, d, q, clk_pol);
-				}
+				else
+					module->addAldff(to_str(iname), clk_sig, arst, d, q, rval, clk_pol);
 				//  For iadff, the initial value is set on the output
 				//  wire.
 				if (id == Id_Iadff) {
