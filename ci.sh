@@ -23,9 +23,12 @@ git describe
 ./configure --enable-libghdl --enable-synth
 make all GNATMAKE="gnatmake -j4"
 sudo make install
+git describe
 cd ..
 
 which ghdl
+ghdl --version
+hash -r
 ghdl --version
 
 set +x
@@ -80,6 +83,8 @@ PATH=$PATH:$PWD/oss-cad-suite/bin
 
 which ghdl
 ghdl --version
+
+rm -f oss-cad-suite/lib/libghdl*
 
 #echo "yosys-config output:"
 #for f in cxx cxxflags ldflags ldlibs; do
