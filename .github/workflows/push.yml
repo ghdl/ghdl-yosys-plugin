@@ -13,11 +13,10 @@ env:
 jobs:
 
   test:
+# Use 22.04 to be compatible with oss-cad
     runs-on: ubuntu-22.04
     steps:
-
     - uses: actions/checkout@v4
-
     - run: ./ci.sh
 
     #- name: Trigger 'synth' in ghdl/docker
