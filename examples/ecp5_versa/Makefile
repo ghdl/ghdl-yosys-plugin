@@ -30,7 +30,11 @@ DEPENDENCIES = lib/ecp5um-std93.cf
 
 all: $(SVFFILE)
 
+ifndef NODOCKER
 include ../docker.mk
+else
+include ../nodocker.mk
+endif
 include ../ghdlsynth.mk
 
 lib:
