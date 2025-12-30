@@ -3,7 +3,13 @@
 cd "$(dirname $0)"
 . ../utils.sh
 
-for d in */*/; do
+if [ $# -eq 0 ]; then
+	dirs=*/*/
+else
+	dirs=$*
+fi
+
+for d in $dirs; do
     cd $d
     printf "${ANSI_CYAN}test $d ${ANSI_NOCOLOR}\n"
     if [ -f ./testsuite.sh ]; then
