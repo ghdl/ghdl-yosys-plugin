@@ -137,18 +137,39 @@ static RTLIL::State logic32_to_state(struct logic_32 v, unsigned int i)
 }
 
 //  Convert V to a Const.
-static RTLIL::Const pval_to_const(Pval v)
+static RTLIL::Const pval_to_const(Pval v, Param_Type kind)
 {
 	const unsigned wd = get_pval_length(v);
-	std::vector<RTLIL::State> bits(wd);
 	struct logic_32 val;
 
-	for (unsigned i = 0; i < wd; i++) {
-		if (i % 32 == 0)
-			val = read_pval(v, i / 32);
-		bits[i] = logic32_to_state(val, i);
+	if (kind == Param_Pval_Real) {
+		union {
+			double r;
+			uint64_t u;
+		} u;
+
+		log_assert(wd == 64);
+		val = read_pval(v, 0);
+		u.u = val.va;
+		val = read_pval(v, 1);
+		u.u |= ((uint64_t)val.va) << 32;
+
+		auto str = stringf("%f", u.r);
+		RTLIL::Const cst = RTLIL::Const(str);
+		cst.flags |= RTLIL::CONST_FLAG_REAL;
+
+		return cst;
 	}
-	return RTLIL::Const(bits);
+	else {
+		std::vector<RTLIL::State> bits(wd);
+
+		for (unsigned i = 0; i < wd; i++) {
+			if (i % 32 == 0)
+				val = read_pval(v, i / 32);
+			bits[i] = logic32_to_state(val, i);
+		}
+		return RTLIL::Const(bits);
+	}
 }
 
 static RTLIL::SigSpec get_src(std::vector<RTLIL::Wire *> &net_map, Net n);
@@ -373,7 +394,7 @@ static void set_src(std::vector<RTLIL::Wire *> &net_map, Net n, Wire *wire)
 //  Create a value from an attribute
 static RTLIL::Const build_attribute_val(Attribute attr)
 {
-	RTLIL::Const cst = pval_to_const(get_attribute_pval(attr));
+	RTLIL::Const cst = pval_to_const(get_attribute_pval(attr), get_attribute_type(attr));
 	if (get_attribute_type(attr) == Param_Pval_String)
 		cst.flags |= RTLIL::CONST_FLAG_STRING;
 	return cst;
@@ -1128,7 +1149,7 @@ static RTLIL::Module *import_module(RTLIL::Design *design, GhdlSynth::Module m)
 				if (id == Id_User_Parameters) {
 					Param_Idx nbr_params = get_nbr_params(submod);
 					for (Param_Idx idx = 0; idx < nbr_params; idx++) {
-						RTLIL::Const cst = pval_to_const(get_param_pval(inst, idx));
+					  RTLIL::Const cst = pval_to_const(get_param_pval(inst, idx), get_param_type(submod, idx));
 						if (get_param_type(submod, idx) == Param_Pval_String)
 							cst.flags |= RTLIL::CONST_FLAG_STRING;
 						cell->setParam(to_str(get_param_name(submod, idx)), cst);
@@ -1332,7 +1353,7 @@ RTLIL::IdString GhdlModule::derive(RTLIL::Design *, const dict<RTLIL::IdString, 
 		//  Skip if already imported.
 		if (m.id < cache.size())
 			continue;
-		
+
 		RTLIL::Module *module;
 		//  Do not try to synthesize predefined gates.
 		if (get_id (m) < Id_User_None)
@@ -1345,7 +1366,7 @@ RTLIL::IdString GhdlModule::derive(RTLIL::Design *, const dict<RTLIL::IdString, 
 		//  to hard code the first index.
 		while (cache.size() < m.id)
 			cache.push_back(nullptr);
-		
+
 		cache.push_back(module);
 		log_assert(cache.size() == m.id + 1);
 	}
