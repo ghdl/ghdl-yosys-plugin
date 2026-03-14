@@ -81,6 +81,8 @@ static std::string to_str_1(Sname name)
 		return to_str_1(get_sname_prefix(name)) + ':' + stringf("%u", get_sname_version(name));
 	case Sname_Field:
 		return to_str_1(get_sname_prefix(name)) + '[' + user_to_str(get_sname_suffix(name)) + ']';
+	case Sname_Index:
+		return to_str_1(get_sname_prefix(name)) + '[' + stringf("%d", get_sname_index(name)) + ']';
 	case Sname_User: {
 		Sname pfx = get_sname_prefix(name);
 		std::string s = user_to_str(get_sname_suffix(name));
