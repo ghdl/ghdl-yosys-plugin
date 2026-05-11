@@ -677,6 +677,16 @@ static bool has_attribute_gclk(Net n)
 	return false;
 }
 
+//  True if port output_out is connected to an inout gate.
+//  In that case, it is really an inout port and its value is read.
+//  If falase, the port is never read and must be considered as an out port.
+static bool is_real_inout(Net output_out)
+{
+	Instance inout_inst = get_net_parent(output_out);
+	Module_Id inout_id = get_id(inout_inst);
+	return (inout_id == Id_Inout || inout_id == Id_Iinout);
+}
+
 static RTLIL::Module *import_module(RTLIL::Design *design, GhdlSynth::Module m)
 {
 	Instance self_inst = get_self_instance (m);
@@ -758,6 +768,10 @@ static RTLIL::Module *import_module(RTLIL::Design *design, GhdlSynth::Module m)
 
 		//  They correspond to inputs of the self instance.
 		Net output_out = get_input_net(self_inst, idx);
+		if (!is_real_inout(output_out)) {
+			//  Will be handled later, as an output port
+			continue;
+		}
 
 		//  Create wire
 		RTLIL::Wire *wire = module->addWire(to_str(get_output_name(m, idx)));
@@ -1247,10 +1261,10 @@ static RTLIL::Module *import_module(RTLIL::Design *design, GhdlSynth::Module m)
 
 	//  Create output ports
 	for (Port_Idx idx = 0; idx < nbr_outputs; idx++) {
-		if (get_inout_flag(m, idx))
-			continue;
-
 		Net output_out = get_input_net(self_inst, idx);
+
+		if (get_inout_flag(m, idx) && is_real_inout(output_out))
+			continue;
 
 		//  Create wire
 		RTLIL::Wire *wire = module->addWire(to_str(get_output_name(m, idx)));
