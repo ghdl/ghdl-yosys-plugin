@@ -1452,6 +1452,16 @@ struct GhdlPass : public Pass {
 		log("\n");
 		log("    --top-name=hash\n");
 		log("        use hash to encode the top entity name\n");
+		log("\n");
+		log("    --rename\n");
+		log("        rename GHDL-mangled identifiers to clean names\n");
+		log("        (equivalent to running vhdl_rename after import)\n");
+		log("\n");
+		log("    --rename-verbose\n");
+		log("        like --rename but also log every rename operation\n");
+		log("\n");
+		log("    --rename-map <file>\n");
+		log("        like --rename but also write a JSON map file\n");
 	}
 #ifdef YOSYS_ENABLE_GHDL
 	virtual void execute(std::vector<std::string> args, RTLIL::Design *design)
@@ -1460,6 +1470,44 @@ struct GhdlPass : public Pass {
 		static unsigned work_initialized;
 		log_header(design, "Executing GHDL.\n");
 
+		//  Parse --rename flags and strip them from args.
+		bool flag_rename = false;
+		bool flag_rename_verbose = false;
+		std::string flag_rename_map;
+		std::vector<std::string> clean_args;
+		clean_args.push_back(args[0]);
+		for (size_t i = 1; i < args.size(); i++) {
+			if (args[i] == "--rename") {
+				flag_rename = true;
+				continue;
+			}
+			if (args[i] == "--rename-verbose") {
+				flag_rename = true;
+				flag_rename_verbose = true;
+				continue;
+			}
+			if (args[i] == "--rename-map" && i + 1 < args.size()) {
+				flag_rename = true;
+				flag_rename_map = args[++i];
+				continue;
+			}
+			clean_args.push_back(args[i]);
+		}
+
+		//  Execute the vhdl_rename pass on the design if requested.
+		auto do_rename = [&]() {
+			if (!flag_rename) return;
+			std::vector<std::string> rename_args;
+			rename_args.push_back("vhdl_rename");
+			if (flag_rename_verbose)
+				rename_args.push_back("-verbose");
+			if (!flag_rename_map.empty()) {
+				rename_args.push_back("-map");
+				rename_args.push_back(flag_rename_map);
+			}
+			Pass::call(design, rename_args);
+		};
+
 		//  Initialize the library.
 		if (!lib_initialized) {
 			lib_initialized = 1;
@@ -1467,7 +1515,7 @@ struct GhdlPass : public Pass {
 			ghdlsynth__init_for_ghdl_synth();
 		}
 
-		if (args.size() == 2 && args[1] == "--disp-config") {
+		if (clean_args.size() == 2 && clean_args[1] == "--disp-config") {
 			ghdlmain__disp_ghdl_version();
 			ghdlcomp__disp_config();
 			log("yosys plugin compiled on " __DATE__ " " __TIME__
@@ -1476,27 +1524,31 @@ struct GhdlPass : public Pass {
 #endif
 			    "\n");
 		}
-		else if (args.size() > 1 && args[1] == "-read") {
-			int cmd_argc = args.size() - 2;
+		else if (clean_args.size() > 1 && clean_args[1] == "-read") {
+			int cmd_argc = clean_args.size() - 2;
 			const char **cmd_argv = new const char *[cmd_argc];
 			for (int i = 0; i < cmd_argc; i++)
-				cmd_argv[i] = args[i + 2].c_str();
+				cmd_argv[i] = clean_args[i + 2].c_str();
 			if (libghdl_synth__ghdl_synth_read(!work_initialized, cmd_argc, cmd_argv, ghdl_read_cb, design) < 0) {
-			  log_cmd_error("vhdl read failed.\n");
+				delete[] cmd_argv;
+				log_cmd_error("vhdl read failed.\n");
 			}
+			delete[] cmd_argv;
 
 			work_initialized++;
+			do_rename();
 		}
 		else {
-			int cmd_argc = args.size() - 1;
+			int cmd_argc = clean_args.size() - 1;
 			const char **cmd_argv = new const char *[cmd_argc];
 			for (int i = 0; i < cmd_argc; i++)
-				cmd_argv[i] = args[i + 1].c_str();
+				cmd_argv[i] = clean_args[i + 1].c_str();
 
 			GhdlSynth::Module top;
 			top = ghdl_synth(!work_initialized, cmd_argc, cmd_argv);
 			work_initialized++;
 			if (!is_valid(top)) {
+				delete[] cmd_argv;
 				log_cmd_error("vhdl import failed.\n");
 			}
 
@@ -1504,6 +1556,8 @@ struct GhdlPass : public Pass {
 			nameid_gclk = get_identifier("gclk");
 
 			import_netlist(design, top);
+			delete[] cmd_argv;
+			do_rename();
 		}
 	}
 #else /* YOSYS_ENABLE_GHDL */
