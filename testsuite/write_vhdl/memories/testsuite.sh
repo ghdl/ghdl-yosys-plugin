@@ -1,7 +1,8 @@
 #!/bin/sh
 # Test: write_vhdl memory
 # Verifies RAM inference with type declarations
-source "$(dirname "$0")/../../rename/common.sh"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "$SCRIPT_DIR/../../rename/common.sh"
 check_tools
 
 write_verilog ram.v << 'EOF'

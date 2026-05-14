@@ -1,7 +1,8 @@
 #!/bin/sh
 # Test 6: Mixed plain and record ports
 # Verifies that plain std_logic ports are left unchanged
-source "$(dirname "$0")/../common.sh"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "$SCRIPT_DIR/../common.sh"
 check_tools
 
 write_vhdl pkg.vhd << 'EOF'

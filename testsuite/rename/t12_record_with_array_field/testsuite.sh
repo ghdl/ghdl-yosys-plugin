@@ -8,7 +8,8 @@
 # Expected after vhdl_rename:
 #   \p[ctrl]\  -> p_ctrl   (leaf std_logic, expanded)
 #   \p[data]\  -> p_data   (packed vector, not further expanded)
-source "$(dirname "$0")/../common.sh"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "$SCRIPT_DIR/../common.sh"
 check_tools
 
 write_vhdl pkg.vhd << 'EOF'

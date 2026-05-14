@@ -1,6 +1,7 @@
 #!/bin/sh
 # Test: write_vhdl mixed design with multiple cell types
-source "$(dirname "$0")/../../rename/common.sh"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "$SCRIPT_DIR/../../rename/common.sh"
 check_tools
 
 write_verilog mixed.v << 'EOF'

@@ -3,7 +3,8 @@
 # Verifies that write_vhdl output can be re-imported by GHDL and
 # re-exported by write_vhdl without errors.
 # Requires both ghdl binary and the ghdl Yosys plugin (our integrated one).
-source "$(dirname "$0")/../../rename/common.sh"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "$SCRIPT_DIR/../../rename/common.sh"
 check_tools
 
 write_verilog counter.v << 'EOF'

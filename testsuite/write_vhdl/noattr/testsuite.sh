@@ -1,7 +1,8 @@
 #!/bin/sh
 # Test: write_vhdl -noattr option
 # Verifies that -noattr suppresses attribute comments
-source "$(dirname "$0")/../../rename/common.sh"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "$SCRIPT_DIR/../../rename/common.sh"
 check_tools
 
 write_verilog test.v << 'EOF'

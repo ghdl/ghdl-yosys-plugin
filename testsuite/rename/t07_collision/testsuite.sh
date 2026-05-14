@@ -2,7 +2,8 @@
 # Test 7: Underscore ambiguity / name collision
 # \db_o[en]\ and \db[o_en]\ both -> db_o_en under naive renaming.
 # The pass must detect this and disambiguate.
-source "$(dirname "$0")/../common.sh"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "$SCRIPT_DIR/../common.sh"
 check_tools
 
 write_vhdl pkg.vhd << 'EOF'

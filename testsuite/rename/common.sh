@@ -1,10 +1,15 @@
 #!/bin/sh
 # Common test utilities for rename and write_vhdl tests
 # within the integrated ghdl-yosys-plugin testsuite.
+#
+# The caller must set SCRIPT_DIR to the directory of the test script
+# before sourcing this file.  For example:
+#   SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+#   . "$SCRIPT_DIR/../common.sh"
 
-# Resolve the plugin path (relative to this script's directory)
+# Resolve the plugin path (relative to SCRIPT_DIR)
 # common.sh is at testsuite/rename/common.sh; repo root is 2 levels up
-COMMON_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+COMMON_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 TOP_DIR="$(cd "$COMMON_DIR/../.." && pwd)"
 PLUGIN="${PLUGIN:-$TOP_DIR/ghdl.so}"
 GHDL=${GHDL:-ghdl}

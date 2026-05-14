@@ -1,7 +1,8 @@
 #!/bin/sh
 # Test: write_vhdl reserved word escaping
 # Verifies that VHDL reserved words used as signal names are escaped
-source "$(dirname "$0")/../../rename/common.sh"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "$SCRIPT_DIR/../../rename/common.sh"
 check_tools
 
 write_verilog reserved.v << 'EOF'

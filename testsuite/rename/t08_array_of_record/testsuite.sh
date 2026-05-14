@@ -2,7 +2,8 @@
 # Test 8: Array of record port
 # GHDL packs these into a single flat vector with no bracket notation.
 # The rename pass should leave these ports untouched.
-source "$(dirname "$0")/../common.sh"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "$SCRIPT_DIR/../common.sh"
 check_tools
 
 write_vhdl pkg.vhd << 'EOF'
