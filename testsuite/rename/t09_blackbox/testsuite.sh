@@ -3,7 +3,8 @@
 # The sub-module is loaded as a Verilog blackbox with already-mangled ports.
 # vhdl_rename must update the cell connection keys even though
 # the module body is absent.
-source "$(dirname "$0")/../common.sh"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "$SCRIPT_DIR/../common.sh"
 check_tools
 
 # The "pre-built" blackbox: a Verilog stub with GHDL-mangled ports.

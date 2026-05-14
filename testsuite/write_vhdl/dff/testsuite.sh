@@ -1,7 +1,8 @@
 #!/bin/sh
 # Test: write_vhdl DFF variants
 # Verifies flip-flop output with VHDL-93 shadow signals
-source "$(dirname "$0")/../../rename/common.sh"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "$SCRIPT_DIR/../../rename/common.sh"
 check_tools
 
 write_verilog dff.v << 'EOF'
