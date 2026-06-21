@@ -214,8 +214,9 @@ std::string next_auto_id()
 	return stringf("%s%0*d", auto_prefix.c_str(), auto_name_digits, auto_name_offset + auto_name_counter++);
 }
 
-// Collected signal declarations from FF cells (emitted before "begin")
-std::vector<std::string> ff_signal_decls;
+// Auxiliary signal declarations (FF internals, split-Y temporaries, and
+// bool-to-vector intermediates) emitted before "begin" in the architecture.
+std::vector<std::string> aux_signal_decls;
 
 // Check if a character needs extended identifier escaping in VHDL
 bool char_needs_vhdl_escape(char c)
@@ -591,6 +592,35 @@ void dump_process_sens(std::ostream &f, std::string indent, std::vector<RTLIL::S
 void dump_conn(std::ostream &f, std::string indent, const RTLIL::SigSpec &left, const RTLIL::SigSpec &right);
 void dump_expr_assign(std::ostream &f, std::string indent, const RTLIL::SigSpec &left, const std::string &expr);
 
+// Emit a boolean result into signal Y with the given condition string.
+//
+// For y_width == 1:
+//   Y <= '1' when COND else '0';
+//
+// For y_width > 1, VHDL-93 s7.3.2 forbids conditional expressions inside
+// aggregates, so an intermediate std_logic signal is introduced:
+//   bool_sig <= '1' when COND else '0';
+//   Y        <= (0 => bool_sig, others => '0');
+//
+// cond must be a complete VHDL boolean expression (no surrounding 'when'/'else').
+void dump_bool_assign(std::ostream &f, std::string indent,
+	const RTLIL::SigSpec &y, const std::string &cond)
+{
+	if (GetSize(y) == 1) {
+		f << indent;
+		dump_sigspec(f, y);
+		f << " <= '1' when " << cond << " else '0';\n";
+	} else {
+		std::string bool_sig = next_auto_id();
+		aux_signal_decls.push_back(
+			stringf("signal %s : std_logic;", bool_sig.c_str()));
+		f << indent << bool_sig << " <= '1' when " << cond << " else '0';\n";
+		f << indent;
+		dump_sigspec(f, y);
+		f << " <= (0 => " << bool_sig << ", others => '0');\n";
+	}
+}
+
 bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 {
 	// Gate-level NOT
@@ -724,13 +754,15 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		if (a_width == y_width) {
 			dump_sigspec(f, cell->getPort(ID::A));
 		} else {
-			f << "std_logic_vector(resize(";
+			// Use arith_open/close so y_width==1 produces std_logic (not
+			// std_logic_vector(0 downto 0) which would be a type mismatch).
+			f << arith_open(y_width) << "resize(";
 			if (a_signed)
 				f << "signed(";
 			else
 				f << "unsigned(";
 			dump_sigspec(f, cell->getPort(ID::A));
-			f << "), " << y_width << "))";
+			f << "), " << y_width << ")" << arith_close(y_width);
 		}
 		f << ";\n";
 		return true;
@@ -809,11 +841,11 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 			op = "xnor";
 
 		f << indent << "-- reduce_" << op << "\n";
-		f << indent;
-		dump_sigspec(f, cell->getPort(ID::Y));
 
 		if (a_width == 1) {
 			// Single bit: just pass through (possibly with inversion for xnor)
+			f << indent;
+			dump_sigspec(f, cell->getPort(ID::Y));
 			f << " <= ";
 			if (cell->type == ID($reduce_xnor))
 				f << "not ";
@@ -828,107 +860,71 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 			}
 			f << ";\n";
 		} else {
-			// Use process-style: generate a temp via function
-			// For now, use a generate-friendly concurrent form:
-			// Y <= '1' when (and_reduce condition) else '0'
-			f << " <= ";
-			if (y_width > 1)
-				f << "(0 => ";
-
-			f << "'1' when ";
+			std::stringstream cond;
 			if (cell->type == ID($reduce_and)) {
-				f << "(";
-				dump_sigspec(f, cell->getPort(ID::A));
-				f << ") = " << vhdl_ones_const(a_width);
+				cond << "(";
+				dump_sigspec(cond, cell->getPort(ID::A));
+				cond << ") = " << vhdl_ones_const(a_width);
 			} else if (cell->type.in(ID($reduce_or), ID($reduce_bool))) {
-				f << "(";
-				dump_sigspec(f, cell->getPort(ID::A));
-				f << ") /= " << vhdl_zero_const(a_width);
+				cond << "(";
+				dump_sigspec(cond, cell->getPort(ID::A));
+				cond << ") /= " << vhdl_zero_const(a_width);
 			} else if (cell->type == ID($reduce_xor)) {
-				// XOR reduce: check if number of 1-bits is odd
-				// Use a helper: xor of all bits
-				f << "(";
+				cond << "(";
 				for (int i = 0; i < a_width; i++) {
 					if (i > 0)
-						f << " xor ";
-					dump_sigspec(f, cell->getPort(ID::A));
-					f << "(" << i << ")";
+						cond << " xor ";
+					dump_sigspec(cond, cell->getPort(ID::A));
+					cond << "(" << i << ")";
 				}
-				f << ") = '1'";
+				cond << ") = '1'";
 			} else { // reduce_xnor
-				f << "(";
+				cond << "(";
 				for (int i = 0; i < a_width; i++) {
 					if (i > 0)
-						f << " xor ";
-					dump_sigspec(f, cell->getPort(ID::A));
-					f << "(" << i << ")";
+						cond << " xor ";
+					dump_sigspec(cond, cell->getPort(ID::A));
+					cond << "(" << i << ")";
 				}
-				f << ") = '0'";
+				cond << ") = '0'";
 			}
-			f << " else '0'";
-			if (y_width > 1)
-				f << ", others => '0')";
-			f << ";\n";
+			dump_bool_assign(f, indent, cell->getPort(ID::Y), cond.str());
 		}
 		return true;
 	}
 
 	// $logic_not -- logical NOT (Y = A == 0)
 	if (cell->type == ID($logic_not)) {
-		int y_width = GetSize(cell->getPort(ID::Y));
-		f << indent;
-		dump_sigspec(f, cell->getPort(ID::Y));
-		f << " <= ";
-		if (y_width > 1)
-			f << "(0 => ";
-		f << "'1' when ";
-		dump_sigspec(f, cell->getPort(ID::A));
+		std::stringstream cond;
+		dump_sigspec(cond, cell->getPort(ID::A));
 		if (GetSize(cell->getPort(ID::A)) == 1)
-			f << " = '0'";
-		else {
-			f << " = " << vhdl_zero_const(GetSize(cell->getPort(ID::A)));
-		}
-		f << " else '0'";
-		if (y_width > 1)
-			f << ", others => '0')";
-		f << ";\n";
+			cond << " = '0'";
+		else
+			cond << " = " << vhdl_zero_const(GetSize(cell->getPort(ID::A)));
+		dump_bool_assign(f, indent, cell->getPort(ID::Y), cond.str());
 		return true;
 	}
 
 	// $logic_and, $logic_or
 	if (cell->type.in(ID($logic_and), ID($logic_or))) {
-		int y_width = GetSize(cell->getPort(ID::Y));
 		bool is_and = cell->type == ID($logic_and);
-
-		f << indent;
-		dump_sigspec(f, cell->getPort(ID::Y));
-		f << " <= ";
-		if (y_width > 1)
-			f << "(0 => ";
-		f << "'1' when (";
-
+		std::stringstream cond;
+		cond << "(";
 		// A != 0
-		dump_sigspec(f, cell->getPort(ID::A));
+		dump_sigspec(cond, cell->getPort(ID::A));
 		if (GetSize(cell->getPort(ID::A)) == 1)
-			f << " = '1'";
-		else {
-			f << " /= " << vhdl_zero_const(GetSize(cell->getPort(ID::A)));
-		}
-
-		f << (is_and ? " and " : " or ");
-
+			cond << " = '1'";
+		else
+			cond << " /= " << vhdl_zero_const(GetSize(cell->getPort(ID::A)));
+		cond << (is_and ? " and " : " or ");
 		// B != 0
-		dump_sigspec(f, cell->getPort(ID::B));
+		dump_sigspec(cond, cell->getPort(ID::B));
 		if (GetSize(cell->getPort(ID::B)) == 1)
-			f << " = '1'";
-		else {
-			f << " /= " << vhdl_zero_const(GetSize(cell->getPort(ID::B)));
-		}
-
-		f << ") else '0'";
-		if (y_width > 1)
-			f << ", others => '0')";
-		f << ";\n";
+			cond << " = '1'";
+		else
+			cond << " /= " << vhdl_zero_const(GetSize(cell->getPort(ID::B)));
+		cond << ")";
+		dump_bool_assign(f, indent, cell->getPort(ID::Y), cond.str());
 		return true;
 	}
 
@@ -1080,7 +1076,6 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 
 	// Comparison operators: $lt, $le, $eq, $ne, $ge, $gt, $eqx, $nex
 	if (cell->type.in(ID($lt), ID($le), ID($eq), ID($ne), ID($ge), ID($gt), ID($eqx), ID($nex))) {
-		int y_width = GetSize(cell->getPort(ID::Y));
 		bool a_signed = cell->getParam(ID::A_SIGNED).as_bool();
 		bool b_signed = cell->getParam(ID::B_SIGNED).as_bool();
 		bool use_signed = a_signed && b_signed;
@@ -1099,34 +1094,25 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		else
 			op = ">";
 
-		f << indent;
-		dump_sigspec(f, cell->getPort(ID::Y));
-		f << " <= ";
-		if (y_width > 1)
-			f << "(0 => ";
-
 		int a_width = cell->getParam(ID::A_WIDTH).as_int();
 		int b_width = cell->getParam(ID::B_WIDTH).as_int();
 
-		f << "'1' when ";
+		std::stringstream cond;
 		if (a_width == 1 && b_width == 1 && cell->type.in(ID($eq), ID($eqx), ID($ne), ID($nex))) {
 			// 1-bit equality/inequality: compare as std_logic directly
-			dump_sigspec(f, cell->getPort(ID::A));
-			f << " " << op << " ";
-			dump_sigspec(f, cell->getPort(ID::B));
+			dump_sigspec(cond, cell->getPort(ID::A));
+			cond << " " << op << " ";
+			dump_sigspec(cond, cell->getPort(ID::B));
 		} else if (use_signed) {
-			dump_sigspec_signed(f, cell->getPort(ID::A));
-			f << " " << op << " ";
-			dump_sigspec_signed(f, cell->getPort(ID::B));
+			dump_sigspec_signed(cond, cell->getPort(ID::A));
+			cond << " " << op << " ";
+			dump_sigspec_signed(cond, cell->getPort(ID::B));
 		} else {
-			dump_sigspec_unsigned(f, cell->getPort(ID::A));
-			f << " " << op << " ";
-			dump_sigspec_unsigned(f, cell->getPort(ID::B));
+			dump_sigspec_unsigned(cond, cell->getPort(ID::A));
+			cond << " " << op << " ";
+			dump_sigspec_unsigned(cond, cell->getPort(ID::B));
 		}
-		f << " else '0'";
-		if (y_width > 1)
-			f << ", others => '0')";
-		f << ";\n";
+		dump_bool_assign(f, indent, cell->getPort(ID::Y), cond.str());
 		return true;
 	}
 
@@ -1269,9 +1255,9 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 			init_str = " := " + init_ss.str();
 		}
 		if (ff.width == 1)
-			ff_signal_decls.push_back(stringf("signal %s : std_logic%s;", sig_name.c_str(), init_str.c_str()));
+			aux_signal_decls.push_back(stringf("signal %s : std_logic%s;", sig_name.c_str(), init_str.c_str()));
 		else
-			ff_signal_decls.push_back(
+			aux_signal_decls.push_back(
 			  stringf("signal %s : std_logic_vector(%d downto 0)%s;", sig_name.c_str(), ff.width - 1, init_str.c_str()));
 
 		f << indent << "-- FF " << id(cell->name) << "\n";
@@ -1683,7 +1669,7 @@ void dump_memory(std::ostream &f, std::string indent, Mem &mem)
 		} else {
 			// Sync read -- clocked process
 			std::string temp_name = next_auto_id();
-			ff_signal_decls.push_back(stringf("signal %s : std_logic_vector(%d downto 0);", temp_name.c_str(), mem.width - 1));
+			aux_signal_decls.push_back(stringf("signal %s : std_logic_vector(%d downto 0);", temp_name.c_str(), mem.width - 1));
 
 			f << indent << "process(";
 			dump_sigspec(f, port.clk);
@@ -1827,7 +1813,7 @@ void dump_cell(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 			orig_y = cell->getPort(ID::Y);
 			int width = orig_y.size();
 			std::string y_tmp = next_auto_id();
-			ff_signal_decls.push_back(stringf("signal %s : %s;", y_tmp.c_str(), vhdl_type_str(width).c_str()));
+			aux_signal_decls.push_back(stringf("signal %s : %s;", y_tmp.c_str(), vhdl_type_str(width).c_str()));
 
 			// Create a temporary wire to hold the Y output
 			RTLIL::Wire *tmp_wire = active_module->addWire(RTLIL::IdString("\\" + y_tmp), width);
@@ -1899,7 +1885,7 @@ void dump_cell(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		if (is_output || is_input) {
 			std::string tmp = next_auto_id();
 			int width = it->second.size();
-			ff_signal_decls.push_back(stringf("signal %s : %s;", tmp.c_str(), vhdl_type_str(width).c_str()));
+			aux_signal_decls.push_back(stringf("signal %s : %s;", tmp.c_str(), vhdl_type_str(width).c_str()));
 			port_intermediates.push_back({tmp, {it->second, is_output}});
 		}
 	}
@@ -2029,7 +2015,7 @@ void dump_expr_assign(std::ostream &f, std::string indent, const RTLIL::SigSpec 
 		// Multi-chunk target: need intermediate signal
 		std::string tmp = next_auto_id();
 		int width = left.size();
-		ff_signal_decls.push_back(stringf("signal %s : %s;", tmp.c_str(), vhdl_type_str(width).c_str()));
+		aux_signal_decls.push_back(stringf("signal %s : %s;", tmp.c_str(), vhdl_type_str(width).c_str()));
 		f << indent << tmp << " <= " << expr << ";\n";
 		// Split into per-chunk assignments
 		int offset = 0;
@@ -2383,7 +2369,7 @@ void dump_module(std::ostream &f, std::string indent, RTLIL::Module *module, RTL
 
 	// Pre-pass: dump cells, memories, and connections to a buffer
 	// to collect FF/memory signal declarations for the declarative region
-	ff_signal_decls.clear();
+	aux_signal_decls.clear();
 	mem_type_decls.clear();
 	std::stringstream body_buf;
 
@@ -2401,7 +2387,7 @@ void dump_module(std::ostream &f, std::string indent, RTLIL::Module *module, RTL
 		f << indent << "  " << decl << "\n";
 
 	// Emit collected FF signal declarations in the architecture declarative region
-	for (auto &decl : ff_signal_decls)
+	for (auto &decl : aux_signal_decls)
 		f << indent << "  " << decl << "\n";
 
 	f << indent << "begin\n";
