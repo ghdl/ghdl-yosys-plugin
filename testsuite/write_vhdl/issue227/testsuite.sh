@@ -145,4 +145,69 @@ run_test t_combined t_combined.v t_combined.vhd
 check_intermediates t_combined t_combined.vhd 3
 echo "PASS: t_combined"
 
+# ---------------------------------------------------------------------------
+# t_vhdl: VHDL-sourced round-trip (requires GHDL; skipped otherwise)
+#
+# Exercises three paths used extensively in production:
+#   sfixed/ufixed: GHDL normalizes to std_logic_vector; no fixed-point
+#                  type names should appear in the write_vhdl output.
+#   Single-bit slice: bus8(2), bus8(5) must produce std_logic ports,
+#                     not std_logic_vector(0 downto 0).
+#   Boolean + vector: flag OR'd into vec (issue #227 equivalent via VHDL).
+#
+# Only syntax is checked (ghdl -s); simulation-level correctness is
+# deferred to a future test.
+# ---------------------------------------------------------------------------
+if command -v "$GHDL" >/dev/null 2>&1; then
+    cp "$SCRIPT_DIR/t_vhdl.vhd" "$WORK/t_vhdl.vhd"
+
+    # Analyse VHDL source
+    (cd "$WORK" && "$GHDL" -a --std=08 t_vhdl.vhd) || {
+        echo "FAIL t_vhdl: GHDL -a failed on source"
+        exit 1
+    }
+
+    # Synthesise via GHDL plugin and write VHDL-93
+    (cd "$WORK" && yosys -m "$PLUGIN" \
+        -p "ghdl --std=08 t_vhdl.vhd -e t_vhdl; write_vhdl t_vhdl_synth.vhd") \
+        >"$WORK/t_vhdl.log" 2>&1 || {
+        echo "FAIL t_vhdl: yosys write_vhdl failed"
+        cat "$WORK/t_vhdl.log" >&2
+        exit 1
+    }
+
+    # No conditional-in-aggregate
+    if grep -q "=> '.' when" "$WORK/t_vhdl_synth.vhd"; then
+        echo "FAIL t_vhdl: conditional-in-aggregate in write_vhdl output"
+        grep "=> '.' when" "$WORK/t_vhdl_synth.vhd" >&2
+        exit 1
+    fi
+
+    # No sfixed/ufixed type names -- GHDL must have normalized them away
+    if grep -qE '\bsfixed\b|\bufixed\b' "$WORK/t_vhdl_synth.vhd"; then
+        echo "FAIL t_vhdl: sfixed/ufixed type name in write_vhdl output"
+        grep -E '\bsfixed\b|\bufixed\b' "$WORK/t_vhdl_synth.vhd" >&2
+        exit 1
+    fi
+
+    # No std_logic_vector(0 downto 0) -- single-bit slices must be std_logic
+    if grep -q "std_logic_vector(0 downto 0)" "$WORK/t_vhdl_synth.vhd"; then
+        echo "FAIL t_vhdl: std_logic_vector(0 downto 0) in output (width-1 type mismatch)"
+        grep "std_logic_vector(0 downto 0)" "$WORK/t_vhdl_synth.vhd" >&2
+        exit 1
+    fi
+
+    # Syntax check under VHDL-2008 only.
+    # The VHDL-93 check is intentionally omitted: fixed_pkg injects $assert
+    # cells whose 'if '1' = '1'' condition is ambiguous under strict -93.
+    # That is a pre-existing limitation of the $assert handler, not
+    # introduced by this fix.
+    "$GHDL" -s --std=08 "$WORK/t_vhdl_synth.vhd" || {
+        echo "FAIL t_vhdl: GHDL -s --std=08 rejected write_vhdl output"
+        exit 1
+    }
+
+    echo "PASS: t_vhdl"
+fi
+
 echo "PASS: issue227"
