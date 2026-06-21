@@ -101,6 +101,9 @@ do_plugin ()
 {
 gstart "[Build] plugin" "$ANSI_MAGENTA"
 
+echo PATH=$PATH
+echo "yosys-config: $(which yosys-config)"
+
 make
 #cp ghdl.so /tmp/ghdl_yosys.so
 
