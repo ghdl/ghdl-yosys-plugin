@@ -84,6 +84,7 @@ which ghdl
 ghdl --version
 
 rm -f oss-cad-suite/lib/libghdl*
+rm -f oss-cad-suite/lib/libc.so* oss-cad-suite/lib/libm.so*
 
 #echo "yosys-config output:"
 #for f in cxx cxxflags ldflags ldlibs; do
