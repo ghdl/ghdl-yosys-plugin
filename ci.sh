@@ -106,11 +106,14 @@ gstart "[Build] plugin" "$ANSI_MAGENTA"
 curl -L https://apt.llvm.org/llvm.sh > llvm.sh
 chmod +x llvm.sh
 sudo ./llvm.sh 18
-sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 100
-sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100
+sudo update-alternatives --force --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 200
+sudo update-alternatives --force --install /usr/bin/clang clang /usr/bin/clang-18 200
 
 echo PATH=$PATH
 echo "yosys-config: $(which yosys-config)"
+
+yosys --version
+clang++ --version
 
 make
 #cp ghdl.so /tmp/ghdl_yosys.so
