@@ -34,26 +34,43 @@ set +x
 gend
 }
 
-# Build yosys (from scratch)
-# Not used: too long.
+# Build yosys (from scratch) using CMake.
+# ABI guarantee: plugin and yosys are compiled with the same toolchain and
+# headers, so std::source_location symbol names will always match.
 do_yosys_build ()
 {
 gstart "[Build] yosys" "$ANSI_MAGENTA"
 
+set -x
+
+# CMake 3.28+ is required.  Ubuntu 22.04 apt ships 3.22, so get a recent
+# version via pip.  --break-system-packages not needed on 22.04.
 sudo apt-get install -y --no-install-recommends \
      build-essential clang bison flex \
-     libreadline-dev gawk tcl-dev libffi-dev git \
-     graphviz xdot pkg-config python3 libboost-system-dev \
-     libboost-python-dev libboost-filesystem-dev zlib1g-dev
+     libreadline-dev tcl-dev libffi-dev git \
+     pkg-config python3 python3-pip zlib1g-dev
+pip3 install --quiet --upgrade cmake
+export PATH="$HOME/.local/bin:$PATH"
 
-git clone https://github.com/YosysHQ/yosys.git
-cd yosys
-git submodule update --init
-make config-clang
-make -j4
-sudo make install
-cd ..
+cmake --version
 
+git clone --recursive https://github.com/YosysHQ/yosys.git
+cmake \
+    -S yosys \
+    -B yosys/build \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr/local \
+    -DYOSYS_INSTALL_DRIVER=ON \
+    -DYOSYS_INSTALL_LIBRARY=ON \
+    -DYOSYS_WITH_PYTHON=OFF \
+    -DBUILD_SHARED_LIBS=ON
+cmake --build yosys/build -j$(nproc)
+sudo cmake --install yosys/build
+
+which yosys
+yosys --version
+
+set +x
 gend
 }
 
@@ -78,7 +95,7 @@ curl -L $url | tar zxf -
 
 set -x
 echo $PATH
-PATH=$PATH:$PWD/oss-cad-suite/bin
+PATH=$PWD/oss-cad-suite/bin:$PATH
 
 which ghdl
 ghdl --version
@@ -101,16 +118,11 @@ do_plugin ()
 {
 gstart "[Build] plugin" "$ANSI_MAGENTA"
 
-echo PATH=$PATH
-echo "yosys-config: $(which yosys-config)"
-
+set -x
 make
-#cp ghdl.so /tmp/ghdl_yosys.so
-
-ldd -v ghdl.so
+set +x
 
 gend
-
 }
 
 # Run the testsuite
@@ -122,7 +134,7 @@ printf "${ANSI_MAGENTA}[Test] testsuite ${ANSI_NOCOLOR}\n"
 
 }
 
-do_yosys_fetch
+do_yosys_build
 do_ghdl
 do_plugin
 do_test
