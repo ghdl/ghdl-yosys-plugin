@@ -113,6 +113,8 @@ echo PATH=$PATH
 echo "yosys-config: $(which yosys-config)"
 
 yosys --version
+which clang
+ls -l /usr/bin/clan*
 clang++ --version
 
 make
