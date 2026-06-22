@@ -113,12 +113,6 @@ echo PATH=$PATH
 echo "yosys-config: $(which yosys-config)"
 
 yosys --version
-which clang
-ls -l /usr/bin/clan*
-ls -l /etc/alternatives
-
-update-alternatives --query clang++
-
 clang++ --version
 
 make
@@ -140,6 +134,6 @@ printf "${ANSI_MAGENTA}[Test] testsuite ${ANSI_NOCOLOR}\n"
 }
 
 do_yosys_fetch
-#do_ghdl
+do_ghdl
 do_plugin
 do_test
