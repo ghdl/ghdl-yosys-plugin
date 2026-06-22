@@ -754,15 +754,15 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		if (a_width == y_width) {
 			dump_sigspec(f, cell->getPort(ID::A));
 		} else {
-			// Use arith_open/close so y_width==1 produces std_logic (not
-			// std_logic_vector(0 downto 0) which would be a type mismatch).
+			// Use arith_open/close so y_width==1 produces std_logic, not
+			// std_logic_vector(0 downto 0).  Use dump_sigspec_unsigned/signed
+			// so 1-bit and constant A are wrapped correctly.
 			f << arith_open(y_width) << "resize(";
 			if (a_signed)
-				f << "signed(";
+				dump_sigspec_signed(f, cell->getPort(ID::A));
 			else
-				f << "unsigned(";
-			dump_sigspec(f, cell->getPort(ID::A));
-			f << "), " << y_width << ")" << arith_close(y_width);
+				dump_sigspec_unsigned(f, cell->getPort(ID::A));
+			f << ", " << y_width << ")" << arith_close(y_width);
 		}
 		f << ";\n";
 		return true;
@@ -1006,18 +1006,13 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 			f << "shift_right(";
 		}
 
-		if (a_signed && cell->type.in(ID($sshl), ID($sshr))) {
-			f << "signed(";
-			dump_sigspec(f, cell->getPort(ID::A));
-			f << ")";
-		} else {
-			f << "unsigned(";
-			dump_sigspec(f, cell->getPort(ID::A));
-			f << ")";
-		}
-		f << ", to_integer(unsigned(";
-		dump_sigspec(f, cell->getPort(ID::B));
-		f << ")))";
+		if (a_signed && cell->type.in(ID($sshl), ID($sshr)))
+			dump_sigspec_signed(f, cell->getPort(ID::A));
+		else
+			dump_sigspec_unsigned(f, cell->getPort(ID::A));
+		f << ", to_integer(";
+		dump_sigspec_unsigned(f, cell->getPort(ID::B));
+		f << "))";
 
 		f << ", " << y_width << "))";
 		if (y_width == 1)
@@ -1037,17 +1032,17 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		f << " <= std_logic_vector(resize(";
 		if (b_signed) {
 			// When B is negative, shift left; when positive, shift right
-			f << "shift_right(unsigned(";
-			dump_sigspec(f, cell->getPort(ID::A));
-			f << "), to_integer(signed(";
-			dump_sigspec(f, cell->getPort(ID::B));
-			f << ")))";
+			f << "shift_right(";
+			dump_sigspec_unsigned(f, cell->getPort(ID::A));
+			f << ", to_integer(";
+			dump_sigspec_signed(f, cell->getPort(ID::B));
+			f << "))";
 		} else {
-			f << "shift_right(unsigned(";
-			dump_sigspec(f, cell->getPort(ID::A));
-			f << "), to_integer(unsigned(";
-			dump_sigspec(f, cell->getPort(ID::B));
-			f << ")))";
+			f << "shift_right(";
+			dump_sigspec_unsigned(f, cell->getPort(ID::A));
+			f << ", to_integer(";
+			dump_sigspec_unsigned(f, cell->getPort(ID::B));
+			f << "))";
 		}
 		f << ", " << y_width << "))";
 		if (y_width == 1)
@@ -1063,11 +1058,11 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 		f << indent << "-- $shiftx\n";
 		f << indent;
 		dump_sigspec(f, cell->getPort(ID::Y));
-		f << " <= std_logic_vector(resize(shift_right(unsigned(";
-		dump_sigspec(f, cell->getPort(ID::A));
-		f << "), to_integer(unsigned(";
-		dump_sigspec(f, cell->getPort(ID::B));
-		f << "))), " << y_width << "))";
+		f << " <= std_logic_vector(resize(shift_right(";
+		dump_sigspec_unsigned(f, cell->getPort(ID::A));
+		f << ", to_integer(";
+		dump_sigspec_unsigned(f, cell->getPort(ID::B));
+		f << ")), " << y_width << "))";
 		if (y_width == 1)
 			f << "(0)";
 		f << ";\n";

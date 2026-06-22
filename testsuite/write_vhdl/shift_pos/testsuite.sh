@@ -52,8 +52,9 @@ run_test() {
 run_test t_shift_const t_shift_const.v t_shift_const.vhd
 
 # ---------------------------------------------------------------------------
-# t_shift_1bit: shift by 1-bit signal -- issue #231
-#   $shl, $shr with B_WIDTH=1 (std_logic in VHDL)
+# t_shift_1bit: shift with 1-bit operands -- issues #231 and related
+#   $shl, $shr with B_WIDTH=1 (std_logic shift amount, issue #231)
+#   $shl, $shr with A_WIDTH=1 (std_logic value being shifted)
 # ---------------------------------------------------------------------------
 run_test t_shift_1bit t_shift_1bit.v t_shift_1bit.vhd
 
