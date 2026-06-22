@@ -84,7 +84,6 @@ which ghdl
 ghdl --version
 
 rm -f oss-cad-suite/lib/libghdl*
-rm -f oss-cad-suite/lib/libc.so* oss-cad-suite/lib/libm.so*
 
 #echo "yosys-config output:"
 #for f in cxx cxxflags ldflags ldlibs; do
@@ -101,6 +100,14 @@ gend
 do_plugin ()
 {
 gstart "[Build] plugin" "$ANSI_MAGENTA"
+
+# Use same llvm compiler as the one used by yosys
+# FIXME: find it automatically
+curl -L https://apt.llvm.org/llvm.sh > llvm.sh
+chmod +x llvm.sh
+./llvm.sh 18
+update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 100
+update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100
 
 echo PATH=$PATH
 echo "yosys-config: $(which yosys-config)"
