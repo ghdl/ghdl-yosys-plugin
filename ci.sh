@@ -105,9 +105,9 @@ gstart "[Build] plugin" "$ANSI_MAGENTA"
 # FIXME: find it automatically
 curl -L https://apt.llvm.org/llvm.sh > llvm.sh
 chmod +x llvm.sh
-./llvm.sh 18
-update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 100
-update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100
+sudo ./llvm.sh 18
+sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 100
+sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100
 
 echo PATH=$PATH
 echo "yosys-config: $(which yosys-config)"
