@@ -118,9 +118,21 @@ do_plugin ()
 {
 gstart "[Build] plugin" "$ANSI_MAGENTA"
 
-set -x
+# Use same llvm compiler as the one used by yosys
+# FIXME: find it automatically
+curl -L https://apt.llvm.org/llvm.sh > llvm.sh
+chmod +x llvm.sh
+sudo ./llvm.sh 18
+sudo update-alternatives --force --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 200
+sudo update-alternatives --force --install /usr/bin/clang clang /usr/bin/clang-18 200
+
+echo PATH=$PATH
+echo "yosys-config: $(which yosys-config)"
+
+yosys --version
+clang++ --version
+
 make
-set +x
 
 gend
 }
@@ -134,7 +146,7 @@ printf "${ANSI_MAGENTA}[Test] testsuite ${ANSI_NOCOLOR}\n"
 
 }
 
-do_yosys_build
+do_yosys_fetch
 do_ghdl
 do_plugin
 do_test
