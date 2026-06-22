@@ -95,7 +95,7 @@ curl -L $url | tar zxf -
 
 set -x
 echo $PATH
-PATH=$PWD/oss-cad-suite/bin:$PATH
+PATH=$PATH:$PWD/oss-cad-suite/bin
 
 which ghdl
 ghdl --version
