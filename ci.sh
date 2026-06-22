@@ -106,8 +106,8 @@ gstart "[Build] plugin" "$ANSI_MAGENTA"
 curl -L https://apt.llvm.org/llvm.sh > llvm.sh
 chmod +x llvm.sh
 sudo ./llvm.sh 18
-sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 100
-sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100
+sudo update-alternatives --force --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 100
+sudo update-alternatives --force --install /usr/bin/clang clang /usr/bin/clang-18 100
 
 echo PATH=$PATH
 echo "yosys-config: $(which yosys-config)"
@@ -115,6 +115,10 @@ echo "yosys-config: $(which yosys-config)"
 yosys --version
 which clang
 ls -l /usr/bin/clan*
+ls -l /etc/alternatives
+
+update-alternatives --query clang++
+
 clang++ --version
 
 make
@@ -136,6 +140,6 @@ printf "${ANSI_MAGENTA}[Test] testsuite ${ANSI_NOCOLOR}\n"
 }
 
 do_yosys_fetch
-do_ghdl
+#do_ghdl
 do_plugin
 do_test
