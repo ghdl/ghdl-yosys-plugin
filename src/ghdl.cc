@@ -677,14 +677,19 @@ static bool has_attribute_gclk(Net n)
 	return false;
 }
 
-//  True if port output_out is connected to an inout gate.
-//  In that case, it is really an inout port and its value is read.
-//  If falase, the port is never read and must be considered as an out port.
-static bool is_real_inout(Net output_out)
+//  Return the net through which an inout port is read.  A direct inout is
+//  represented by a virtual gate.  With --keep-hierarchy=no, a read through a
+//  flattened child can instead be represented by an internal signal.
+static Net get_inout_read_net(Net output_out)
 {
 	Instance inout_inst = get_net_parent(output_out);
 	Module_Id inout_id = get_id(inout_inst);
-	return (inout_id == Id_Inout || inout_id == Id_Iinout);
+	if (inout_id == Id_Inout || inout_id == Id_Iinout)
+		return get_output(inout_inst, 0);
+	if (inout_id == Id_Signal || inout_id == Id_Isignal)
+		return output_out;
+
+	return Net{0};
 }
 
 static RTLIL::Module *import_module(RTLIL::Design *design, GhdlSynth::Module m)
@@ -768,7 +773,8 @@ static RTLIL::Module *import_module(RTLIL::Design *design, GhdlSynth::Module m)
 
 		//  They correspond to inputs of the self instance.
 		Net output_out = get_input_net(self_inst, idx);
-		if (!is_real_inout(output_out)) {
+		Net inout_rd = get_inout_read_net(output_out);
+		if (inout_rd.id == 0) {
 			//  Will be handled later, as an output port
 			continue;
 		}
@@ -781,8 +787,6 @@ static RTLIL::Module *import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		wire->width = get_width(output_out);
                 add_attributes_chain(*wire, get_output_port_first_attribute(m, idx));
 
-		Instance inout_inst = get_net_parent(output_out);
-		Net inout_rd = get_output(inout_inst, 0);
 		set_src(net_map, inout_rd, wire);
 	}
 
@@ -1263,7 +1267,7 @@ static RTLIL::Module *import_module(RTLIL::Design *design, GhdlSynth::Module m)
 	for (Port_Idx idx = 0; idx < nbr_outputs; idx++) {
 		Net output_out = get_input_net(self_inst, idx);
 
-		if (get_inout_flag(m, idx) && is_real_inout(output_out))
+		if (get_inout_flag(m, idx) && get_inout_read_net(output_out).id != 0)
 			continue;
 
 		//  Create wire
