@@ -1096,7 +1096,13 @@ static RTLIL::Module *import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			}
 			break;
 		case Id_Bmux:
-			module->addBmux(to_str(iname), IN(0), IN(1), OUT(0));
+			// A one-bit bmux is also a variable bit extract.  Representing it
+			// as $shiftx lets technology-specific passes recognize structures
+			// such as a dynamically tapped Xilinx shift register.
+			if (OUT(0).size() == 1)
+				module->addShiftx(to_str(iname), IN(0), IN(1), OUT(0));
+			else
+				module->addBmux(to_str(iname), IN(0), IN(1), OUT(0));
 			break;
 		case Id_Dff:
 		case Id_Idff:
