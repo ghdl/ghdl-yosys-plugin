@@ -1272,14 +1272,16 @@ static RTLIL::Module *import_module(RTLIL::Design *design, GhdlSynth::Module m)
 	//  Create output ports
 	for (Port_Idx idx = 0; idx < nbr_outputs; idx++) {
 		Net output_out = get_input_net(self_inst, idx);
+		bool is_inout = get_inout_flag(m, idx);
 
-		if (get_inout_flag(m, idx) && get_inout_read_net(output_out).id != 0)
+		if (is_inout && get_inout_read_net(output_out).id != 0)
 			continue;
 
 		//  Create wire
 		RTLIL::Wire *wire = module->addWire(to_str(get_output_name(m, idx)));
 		wire->port_id = nbr_inputs + idx + 1;
 		wire->port_output = true;
+		wire->port_input = is_inout;
 		wire->width = get_width(output_out);
                 add_attributes_chain(*wire, get_output_port_first_attribute(m, idx));
 
