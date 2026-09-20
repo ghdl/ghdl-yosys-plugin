@@ -677,35 +677,6 @@ static bool has_attribute_gclk(Net n)
 	return false;
 }
 
-//  Follow net N from an inout port of a cell.
-//  Return the index of the inout port of the module to which it is connected,
-//  so both inout ports (from the cell and from the module) are directly
-//  connected.
-//  Return < 0 if not connected to an inout port.
-//  TODO: handle concat/extract.
-static int follow_cell_inout(Net n, Instance self)
-{
-	while (1) {
-		Input port = get_first_sink (n);
-		if (port.id == 0) {
-			//  Not connected
-			return -1;
-		}
-		Instance inst = get_input_parent(port);
-		if (inst.id == self.id)
-			return get_input_idx(port);
-		switch(get_id(inst)) {
-		case Id_Inout:
-		case Id_Iinout:
-			n = get_output(inst, 0);
-			break;
-		default:
-			log("follow_cell_inout: cannot handle gate %s (for net %u)\n", to_str(get_module_name(get_module(inst))).c_str(), n.id);
-			log_abort();
-		}
-	}
-}
-
 static RTLIL::Module *import_module(RTLIL::Design *design, GhdlSynth::Module m)
 {
 	Instance self_inst = get_self_instance (m);
@@ -744,6 +715,7 @@ static RTLIL::Module *import_module(RTLIL::Design *design, GhdlSynth::Module m)
 				to_str(get_input_name(m, idx)),
 				get_input_width(m, idx));
 			wire->port_input = true;
+			wire->port_output = get_inout_flag(m, idx);
                         add_attributes_chain(*wire, get_input_port_first_attribute(m, idx));
 		}
 		Port_Idx nbr_outputs = get_nbr_outputs(m);
@@ -751,8 +723,6 @@ static RTLIL::Module *import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			RTLIL::Wire *wire = module->addWire(
 				to_str(get_output_name(m, idx)),
 				get_output_width(m, idx));
-			if (get_inout_flag(m, idx))
-				wire->port_input = true;
 			wire->port_output = true;
                         add_attributes_chain(*wire, get_output_port_first_attribute(m, idx));
                 }
@@ -775,43 +745,13 @@ static RTLIL::Module *import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		RTLIL::Wire *wire = module->addWire(to_str(get_input_name(m, idx)));
 		wire->port_id = idx + 1;
 		wire->port_input = true;
+		wire->port_output = get_inout_flag(m, idx);
 		wire->width = get_width(port);
 		set_src(net_map, port, wire);
                 add_attributes_chain(*wire, get_input_port_first_attribute(m, idx));
 	}
 
 	Port_Idx nbr_outputs = get_nbr_outputs(m);
-	auto inout_ports = std::vector<Wire *>(nbr_outputs, nullptr);
-	//  Create inout ports, so that they can be read.
-	for (Port_Idx idx = 0; idx < nbr_outputs; idx++) {
-		if (!get_inout_flag(m, idx))
-			continue;
-
-		//  They correspond to inputs of the self instance.
-		Net output_out = get_input_net(self_inst, idx);
-
-		//  Create wire
-		RTLIL::Wire *wire = module->addWire(to_str(get_output_name(m, idx)));
-		wire->port_id = nbr_inputs + idx + 1;
-		wire->port_output = true;
-		wire->port_input = true;
-		wire->width = get_width(output_out);
-                add_attributes_chain(*wire, get_output_port_first_attribute(m, idx));
-
-		inout_ports[idx] = wire;
-
-		//  If the port is connected to an inout gate, both outputs
-		//  represent the value of the port.  Put the wire in the map,
-		//  so that any input connected to this inout gate will be
-		//  connected to the inout port.
-		Instance inout_inst = get_net_parent(output_out);
-		Module_Id inout_id = get_id(inout_inst);
-		if (inout_id == Id_Inout || inout_id == Id_Iinout) {
-			//  Net from inout/iinout gate, for readers.
-			set_src(net_map, get_output(inout_inst, 0), wire);
-			set_src(net_map, get_output(inout_inst, 1), wire);
-		}
-	}
 
 	add_attributes_from_instance(*module, self_inst);
 
@@ -890,17 +830,7 @@ static RTLIL::Module *import_module(RTLIL::Design *design, GhdlSynth::Module m)
 				//  The wire may have been created for a module output
 				if (is_set(net_map, o))
 					continue;
-				RTLIL::Wire *wire = nullptr;
-
-				if (get_inout_flag(im, idx)) {
-					//  Try to connect directly an inout port to the inout port of the module
-					int p = follow_cell_inout(o, self_inst);
-					if (p >= 0)
-						wire = inout_ports[p];
-				}
-
-				if (wire == nullptr)
-					wire = module->addWire(NEW_ID, get_width(o));
+				RTLIL::Wire *wire = module->addWire(NEW_ID, get_width(o));
 
 				set_src(net_map, o, wire);
 			}
@@ -1233,8 +1163,7 @@ static RTLIL::Module *import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		case Id_Inout:
 		case Id_Iinout:
 			// Virtual gate.
-			// Connect input to output.
-			module->connect(OUT(0), IN(0));
+			module->connect(IN(1), IN(0));
 			break;
 		case Id_Assert:
 			module->addAssert(to_str(iname), IN(0), State::S1);
@@ -1311,21 +1240,11 @@ static RTLIL::Module *import_module(RTLIL::Design *design, GhdlSynth::Module m)
 	//  Create output ports
 	for (Port_Idx idx = 0; idx < nbr_outputs; idx++) {
 		Net output_out = get_input_net(self_inst, idx);
-		bool is_inout = get_inout_flag(m, idx);
-
-		if (is_inout) {
-			//  If there is no inout gate, connect the inout port.
-			RTLIL::SigSpec w = get_src(net_map, output_out);
-			if (w != inout_ports[idx])
-				module->connect(inout_ports[idx], w);
-			continue;
-		}
 
 		//  Create wire
 		RTLIL::Wire *wire = module->addWire(to_str(get_output_name(m, idx)));
 		wire->port_id = nbr_inputs + idx + 1;
 		wire->port_output = true;
-		wire->port_input = is_inout;
 		wire->width = get_width(output_out);
 		add_attributes_chain(*wire, get_output_port_first_attribute(m, idx));
 

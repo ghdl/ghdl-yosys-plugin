@@ -8,13 +8,13 @@ module sub_Brtl(a, b);
   assign b = a;
 endmodule
 
-module top(a, b, c, d);
+module top(a, c, b, d);
   inout a;
   wire a;
-  output b;
-  wire b;
   inout c;
   wire c;
+  output b;
+  wire b;
   output d;
   wire d;
   wire _0_;
