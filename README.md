@@ -69,7 +69,11 @@ Some projects provide pre-built packages including GHDL, Yosys. Unless you have 
 guix install ghdl-llvm ghdl-yosys-plugin
 
 # use it as
-alias yosys='yosys -m ~/.guix-profile/lib/yosys/ghdl.so'
+alias yosys='yosys -m "$YOSYS_PLUGIN_GHDL/ghdl.so"'
+
+# as an alternative
+export YOSYS_PLUGIN_PATH="$YOSYS_PLUGIN_GHDL"
+yosys -p 'import -i ghdl.so'
 ```
 
 ## Usage
@@ -152,9 +156,8 @@ Synthesis with Yosys:
 
 ```sh
 YS='ghdl leds.vhdl spin1.vhdl -e leds; synth_ice40 -json leds.json'
-MODULE='~/.guix-profile/lib/yosys/ghdl.so'
 
-guix shell -CP ghdl-yosys-plugin -- yosys -m $MODULE -p $YS
+guix shell -CP ghdl-yosys-plugin -- yosys -m "$YOSYS_PLUGIN_GHDL/ghdl.so" -p "$YS"
 ```
 
 P&R the design with [nextpnr](https://github.com/YosysHQ/nextpnr) and generate a bitstream with [icestorm](https://github.com/cliffordwolf/icestorm) tools:
