@@ -8,7 +8,7 @@ for f in test1 test2; do
         select -module ${f}; \
         select -assert-count 1 i:c_io; \
         select -assert-count 1 o:c_io; \
-        write_rtlil ${f}.il"
+        write_rtlil -readable ${f}.il"
     fgrep -q 'connect \b_io \a_i' ${f}.il
     fgrep -q 'connect \c_io \a_i' ${f}.il
 done

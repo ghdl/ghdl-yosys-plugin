@@ -23,6 +23,13 @@
 #include <stdio.h>
 #include <string.h>
 
+#if YOSYS_MAJOR > 0 || (YOSYS_MAJOR == 0 && YOSYS_MINOR >= 70)
+#define USE_TWINEPOOL
+#define TO_STR(design, id) design->twines().str(id)
+#else
+#define TO_STR(design, id) id.c_str()
+#endif
+
 USING_YOSYS_NAMESPACE
 
 #ifdef YOSYS_ENABLE_GHDL
@@ -404,15 +411,20 @@ static RTLIL::Const build_attribute_val(Attribute attr)
 }
 
 //  Create the identifier of an attribute
-static IdString build_attribute_id(Attribute attr)
+static IdString build_attribute_id(Design *design, Attribute attr)
 {
+	string s = '\\' + string(get_cstr(get_attribute_name(attr)));
+#ifdef USE_TWINEPOOL
+	return design->twines().add(s);
+#else
 	return IdString('\\' + string(get_cstr(get_attribute_name(attr))));
+#endif
 }
 
-static void add_attributes_chain(RTLIL::AttrObject &obj, Attribute attr)
+static void add_attributes_chain(Design *design, RTLIL::AttrObject &obj, Attribute attr)
 {
 	while (attr.id != 0) {
-		IdString id = build_attribute_id(attr);
+		IdString id = build_attribute_id(design, attr);
 		obj.attributes[id] = build_attribute_val(attr);
 
 		attr = get_attribute_next(attr);
@@ -420,9 +432,9 @@ static void add_attributes_chain(RTLIL::AttrObject &obj, Attribute attr)
 }
 
 //  Convert attributes of INST to OBJ.
-static void add_attributes_from_instance(RTLIL::AttrObject &obj, Instance inst)
+static void add_attributes_from_instance(Design *design, RTLIL::AttrObject &obj, Instance inst)
 {
-	add_attributes_chain(obj, get_instance_first_attribute (inst));
+	add_attributes_chain(design, obj, get_instance_first_attribute (inst));
 }
 
 //  Extract the polarity from net N (output of an edge gate).
@@ -450,7 +462,7 @@ static RTLIL::SigSpec extract_clk_sig(std::vector<RTLIL::Wire *> &net_map, Net n
 
 //  INST is an Id_Memory or an Id_Memory_Init
 //  All the inputs have been connected, all the outputs have been pushed.
-static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net_map, Instance inst)
+static void import_memory(Design *design, RTLIL::Module *module, std::vector<RTLIL::Wire *> &net_map, Instance inst)
 {
 	Net mem_o = get_output(inst, 0);
 	Input first_port = get_first_sink (mem_o);
@@ -511,7 +523,7 @@ static void import_memory(RTLIL::Module *module, std::vector<RTLIL::Wire *> &net
 	delete mem1;
 
 	//  Set attributes.
-	add_attributes_from_instance(*mem, inst);
+	add_attributes_from_instance(design, *mem, inst);
 
 	//  Initial value
 	if (get_id(inst) == Id_Memory_Init) {
@@ -692,10 +704,15 @@ static RTLIL::Module *import_module(RTLIL::Design *design, GhdlSynth::Module m)
 	}
 
 	RTLIL::Module *module = new RTLIL::Module;
+#ifdef USE_TWINEPOOL
+	module->name = design->twines().add(module_name);
+	log("Importing module %s.\n", design->twines().str(module->name));
+#else
 	module->name = module_name;
+	log("Importing module %s.\n", RTLIL::id2cstr(module->name));
+#endif
 	design->add(module);
 
-	log("Importing module %s.\n", RTLIL::id2cstr(module->name));
 
 	//  TODO: support submodules (currently they aren't generated)
 	if (is_valid(get_first_sub_module(m))) {
@@ -716,7 +733,7 @@ static RTLIL::Module *import_module(RTLIL::Design *design, GhdlSynth::Module m)
 				get_input_width(m, idx));
 			wire->port_input = true;
 			wire->port_output = get_inout_flag(m, idx);
-                        add_attributes_chain(*wire, get_input_port_first_attribute(m, idx));
+                        add_attributes_chain(design, *wire, get_input_port_first_attribute(m, idx));
 		}
 		Port_Idx nbr_outputs = get_nbr_outputs(m);
 		for (Port_Idx idx = 0; idx < nbr_outputs; idx++) {
@@ -724,11 +741,18 @@ static RTLIL::Module *import_module(RTLIL::Design *design, GhdlSynth::Module m)
 				to_str(get_output_name(m, idx)),
 				get_output_width(m, idx));
 			wire->port_output = true;
-                        add_attributes_chain(*wire, get_output_port_first_attribute(m, idx));
+                        add_attributes_chain(design, *wire, get_output_port_first_attribute(m, idx));
                 }
 		Param_Idx nbr_params = get_nbr_params(m);
 		for (Param_Idx idx = 0; idx < nbr_params; idx++) {
-			module->avail_parameters(to_str(get_param_name(m, idx)));
+			string s = to_str(get_param_name(m, idx));
+			IdString id;
+#ifdef USE_TWINEPOOL
+			id = design->twines().add(s);
+#else
+			id = s;
+#endif
+			module->avail_parameters(id);
 		}
 
 		module->fixup_ports();
@@ -748,12 +772,12 @@ static RTLIL::Module *import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		wire->port_output = get_inout_flag(m, idx);
 		wire->width = get_width(port);
 		set_src(net_map, port, wire);
-                add_attributes_chain(*wire, get_input_port_first_attribute(m, idx));
+                add_attributes_chain(design, *wire, get_input_port_first_attribute(m, idx));
 	}
 
 	Port_Idx nbr_outputs = get_nbr_outputs(m);
 
-	add_attributes_from_instance(*module, self_inst);
+	add_attributes_from_instance(design, *module, self_inst);
 
 	//  Vector of gates with at least one inout port, to be fixed.
 	std::vector<Instance> inout_gates;
@@ -849,7 +873,7 @@ static RTLIL::Module *import_module(RTLIL::Design *design, GhdlSynth::Module m)
 			set_src(net_map, s, wire);
 
 			//  Attributes
-			add_attributes_from_instance(*wire, inst);
+			add_attributes_from_instance(design, *wire, inst);
 			break;
 		}
 		case Id_Output:
@@ -1234,7 +1258,7 @@ static RTLIL::Module *import_module(RTLIL::Design *design, GhdlSynth::Module m)
 	}
 
 	for (auto i : memories) {
-		import_memory(module, net_map, i);
+		import_memory(design, module, net_map, i);
 	}
 
 	//  Create output ports
@@ -1246,14 +1270,14 @@ static RTLIL::Module *import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		wire->port_id = nbr_inputs + idx + 1;
 		wire->port_output = true;
 		wire->width = get_width(output_out);
-		add_attributes_chain(*wire, get_output_port_first_attribute(m, idx));
+		add_attributes_chain(design, *wire, get_output_port_first_attribute(m, idx));
 
 		module->connect(wire, get_src(net_map, output_out));
 
 		Instance inst = get_net_parent(output_out);
 		switch(get_id(inst)) {
 		case Id_Output:
-			add_attributes_from_instance(*wire, inst);
+			add_attributes_from_instance(design, *wire, inst);
 			break;
 		default:
 			break;
@@ -1286,12 +1310,12 @@ struct GhdlModule : RTLIL::Module {
 
 std::vector<RTLIL::Module *> GhdlModule::cache;
 
-RTLIL::IdString GhdlModule::derive(RTLIL::Design *, const dict<RTLIL::IdString, RTLIL::Const> &parameters, bool)
+RTLIL::IdString GhdlModule::derive(RTLIL::Design *design, const dict<RTLIL::IdString, RTLIL::Const> &parameters, bool)
 {
 	vector<struct Pval_Cstring_tuple> assocs;
 	GhdlSynth::synth_instance_type *inst;
 
-	log("VHDL derive %s\n", this->name.c_str());
+	log("VHDL derive %s\n", TO_STR(design, this->name));
 
 	//  Convert parameters to Pval.
 	for (auto const& it : parameters) {
@@ -1320,7 +1344,7 @@ RTLIL::IdString GhdlModule::derive(RTLIL::Design *, const dict<RTLIL::IdString, 
 		}
 
 		//  Skip leading '\\' of parameter name
-		assocs.push_back({it.first.c_str() + 1, pv});
+		assocs.push_back({TO_STR(design, it.first).c_str() + 1, pv});
 	}
 
 	inst = libghdl_synth__ghdl_synth_with_params(this->node, assocs.data(), assocs.size());
@@ -1372,7 +1396,11 @@ static void ghdl_read_cb(unsigned int raw_id, unsigned int node, void *arg)
 	GhdlModule *module;
 
 	module = new GhdlModule;
+#ifdef USE_TWINEPOOL
+	module->name = design->twines().add("$abstract\\" + module_name);
+#else
 	module->name = "$abstract\\" + module_name;
+#endif
 	module->node = node;
 
 	// log("Importing module %s.\n", RTLIL::id2cstr(module->name));

@@ -38,9 +38,9 @@ PRIVATE_NAMESPACE_BEGIN
 
 // Return true if this IdString needs renaming (is an escaped GHDL name
 // containing '[', ']', or ':' after the leading backslash).
-static bool needs_rename(const IdString &id)
+static bool needs_rename(TwinePool &twinepool, const IdString &id)
 {
-	const std::string &s = id.str();
+	const std::string &s = twinepool.str(id);
 	// Public names start with '\'; private with '$' (leave those alone).
 	if (s.empty() || s[0] != '\\')
 		return false;
@@ -59,9 +59,9 @@ static bool needs_rename(const IdString &id)
 //	 \port[outer][inner]\ -> port_outer_inner
 //	 \inst:649\			  -> inst_649
 //	 \:1132\			  -> _anon_1132
-static std::string transform_name(const IdString &id)
+static std::string transform_name(TwinePool &twinepool, const IdString &id)
 {
-	const std::string &s = id.str();
+	const std::string &s = twinepool.str(id);
 	// s is e.g. "\\port[field]\\" -- strip leading '\', the IdString
 	// representation has the leading backslash but no trailing one.
 	// (Yosys stores escaped ids as "\name" without trailing backslash.)
@@ -145,9 +145,9 @@ static int rename_module_wires(Module *module, bool verbose,
 	// --- Phase 1: collect proposed renames ---
 	std::vector<RenameEntry> entries;
 	for (auto wire : module->wires()) {
-		if (!needs_rename(wire->name))
+		if (!needs_rename(module->twines(), wire->name))
 			continue;
-		std::string proposed = transform_name(wire->name);
+		std::string proposed = transform_name(module->twines(), wire->name);
 		entries.push_back({wire->name, proposed});
 	}
 
@@ -164,8 +164,8 @@ static int rename_module_wires(Module *module, bool verbose,
 	// to avoid colliding with them.
 	std::set<std::string> existing_names;
 	for (auto wire : module->wires()) {
-		if (!needs_rename(wire->name))
-			existing_names.insert(wire->name.str().substr(1)); // strip '\'
+		if (!needs_rename(module->twines(), wire->name))
+			existing_names.insert(module->twines().str(wire->name).substr(1)); // strip '\'
 	}
 
 	// Build the final rename map: old IdString -> new IdString
@@ -185,14 +185,14 @@ static int rename_module_wires(Module *module, bool verbose,
 			if (candidate != proposed)
 				log_warning("vhdl_rename: in module %s: '%s' collides with "
 							"existing name, renamed to '%s'\n",
-							log_id(module->name),
-							sources[0].c_str(), candidate.c_str());
-			rename_map[sources[0]] = IdString("\\" + candidate);
+							module->twines().str(module->name),
+							module->twines().str(sources[0]), candidate.c_str());
+			rename_map[sources[0]] = module->twines().add("\\" + candidate);
 		} else {
 			// Multiple sources map to same proposed name -- disambiguate
 			log_warning("vhdl_rename: in module %s: %zu names all map to "
 						"'%s', disambiguating with numeric suffix\n",
-						log_id(module->name), sources.size(),
+						module->twines().str(module->name), sources.size(),
 						proposed.c_str());
 			for (size_t i = 0; i < sources.size(); i++) {
 				std::string candidate = proposed + "_" + std::to_string(i);
@@ -200,7 +200,7 @@ static int rename_module_wires(Module *module, bool verbose,
 				while (existing_names.count(candidate) ||
 					   proposed_map.count(candidate))
 					candidate += "_";
-				rename_map[sources[i]] = IdString("\\" + candidate);
+				rename_map[sources[i]] = module->twines().add("\\" + candidate);
 			}
 		}
 	}
@@ -215,17 +215,17 @@ static int rename_module_wires(Module *module, bool verbose,
 	for (auto &kv : rename_map) {
 		if (verbose)
 			log("  %s.%s  ->  %s\n",
-				log_id(module->name),
-				kv.first.c_str(),
-				kv.second.c_str());
+				module->twines().str(module->name),
+				module->twines().str(kv.first),
+				module->twines().str(kv.second));
 
 		// Populate map output before renaming (name still valid)
 		if (map_out) {
 			Wire *w = wire_snapshot.count(kv.first) ? wire_snapshot[kv.first] : nullptr;
 			MapEntry me;
-			me.module	= log_id(module->name);	 // strips leading backslash
-			me.old_name = kv.first.str();
-			me.new_name = kv.second.str().substr(1); // strip leading '\'
+			me.module	= module->twines().str(module->name);	 // strips leading backslash
+			me.old_name = module->twines().str(kv.first);
+			me.new_name = module->twines().str(kv.second).substr(1); // strip leading '\'
 			me.is_port	= w ? w->port_input || w->port_output : false;
 			me.port_in	= w ? w->port_input : false;
 			me.width	= w ? w->width : 1;
@@ -317,7 +317,7 @@ struct VhdlRenamePass : public Pass {
 			int n = rename_module_wires(module, verbose, map_out);
 			if (n > 0)
 				log("  Module %s: renamed %d wire(s).\n",
-					log_id(module->name), n);
+					module->twines().str(module->name), n);
 			total += n;
 		}
 
@@ -334,10 +334,10 @@ struct VhdlRenamePass : public Pass {
 				// Collect rekeys needed (can't mutate dict while iterating)
 				std::vector<std::pair<IdString,IdString>> rekeys;
 				for (auto &conn : cell->connections()) {
-					if (!needs_rename(conn.first))
+					if (!needs_rename(module->twines(), conn.first))
 						continue;
-					std::string new_name = "\\" + transform_name(conn.first);
-					IdString new_id(new_name);
+					std::string new_name = "\\" + transform_name(module->twines(), conn.first);
+					IdString new_id = module->twines().add(new_name);
 					// For known modules: only rekey if the new name exists
 					// (guards against false matches on non-GHDL cells)
 					// For blackboxes: trust the transform unconditionally
@@ -348,8 +348,8 @@ struct VhdlRenamePass : public Pass {
 				for (auto &rk : rekeys) {
 					if (verbose)
 						log("  cell %s.%s port %s -> %s\n",
-							log_id(module->name), log_id(cell->name),
-							rk.first.c_str(), rk.second.c_str());
+							design->twines().str(module->name), design->twines().str(cell->name),
+							design->twines().str(rk.first), design->twines().str(rk.second));
 					SigSpec sig = cell->getPort(rk.first);
 					cell->unsetPort(rk.first);
 					cell->setPort(rk.second, sig);

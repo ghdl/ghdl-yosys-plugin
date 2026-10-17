@@ -8,7 +8,7 @@ run_yosys -q -p "ghdl --keep-hierarchy=no --std=08 inout_hierarchy.vhdl -e inout
   select -module inout_top; \
   select -assert-count 1 i:pads; \
   select -assert-count 1 o:pads; \
-  write_rtlil inout_hierarchy.il"
+  write_rtlil -readable inout_hierarchy.il"
 
 fgrep -q 'wire width 4 inout' inout_hierarchy.il
 fgrep -q 'connect \sense \pads' inout_hierarchy.il
