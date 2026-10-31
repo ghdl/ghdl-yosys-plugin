@@ -2128,7 +2128,8 @@ void collect_components(std::ostream &f, std::string indent, RTLIL::Module *modu
 // auto_name_map is finalised).
 std::string vhdl_id_raw(TwinePool &twinepool, RTLIL::IdString internal_id)
 {
-	const char *str = twinepool.str(internal_id).c_str();
+	const std::string sstr = twinepool.str(internal_id);
+	const char *str = sstr.c_str();
 	if (*str == '\\')
 		str++;
 	std::string result = str;
