@@ -515,12 +515,10 @@ static void import_memory(Design *design, RTLIL::Module *module, std::vector<RTL
 	unsigned size = get_width(mem_o) / width;
 
 	//  Create the memory.
-	RTLIL::Memory *mem1 = new RTLIL::Memory;
-	mem1->width = width;
-	mem1->start_offset = 0;
-	mem1->size = size;
-	RTLIL::Memory *mem = module->addMemory(mem_str, mem1);
-	delete mem1;
+	RTLIL::Memory *mem = module->addMemory(mem_str);
+	mem->width = width;
+	mem->start_offset = 0;
+	mem->size = size;
 
 	//  Set attributes.
 	add_attributes_from_instance(design, *mem, inst);
@@ -703,15 +701,8 @@ static RTLIL::Module *import_module(RTLIL::Design *design, GhdlSynth::Module m)
 		return nullptr;
 	}
 
-	RTLIL::Module *module = new RTLIL::Module;
-#ifdef USE_TWINEPOOL
-	module->name = design->twines().add(module_name);
-	log("Importing module %s.\n", design->twines().str(module->name));
-#else
-	module->name = module_name;
-	log("Importing module %s.\n", RTLIL::id2cstr(module->name));
-#endif
-	design->add(module);
+	RTLIL::Module *module = design->addModule(design->twines().add(module_name));
+	log("Importing module %s.\n", module_name.c_str());
 
 
 	//  TODO: support submodules (currently they aren't generated)
@@ -1306,6 +1297,10 @@ struct GhdlModule : RTLIL::Module {
 	RTLIL::IdString derive(RTLIL::Design *design, const dict<RTLIL::IdString, RTLIL::Const> &parameters, bool mayfail) override;
 
 	static std::vector<RTLIL::Module *> cache;
+
+	explicit GhdlModule(RTLIL::Design *design) : RTLIL::Module(design) {
+		this->node = 0;
+	}
 };
 
 std::vector<RTLIL::Module *> GhdlModule::cache;
@@ -1395,7 +1390,7 @@ static void ghdl_read_cb(unsigned int raw_id, unsigned int node, void *arg)
 	RTLIL::Design *design = static_cast<RTLIL::Design *>(arg);
 	GhdlModule *module;
 
-	module = new GhdlModule;
+	module = new GhdlModule(design);
 #ifdef USE_TWINEPOOL
 	module->name = design->twines().add("$abstract\\" + module_name);
 #else
