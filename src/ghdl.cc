@@ -23,12 +23,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#if YOSYS_MAJOR > 0 || (YOSYS_MAJOR == 0 && YOSYS_MINOR >= 70)
-#define USE_TWINEPOOL
 #define TO_STR(design, id) design->twines().str(id)
-#else
-#define TO_STR(design, id) id.c_str()
-#endif
 
 USING_YOSYS_NAMESPACE
 
@@ -413,12 +408,7 @@ static RTLIL::Const build_attribute_val(Attribute attr)
 //  Create the identifier of an attribute
 static IdString build_attribute_id(Design *design, Attribute attr)
 {
-	string s = '\\' + string(get_cstr(get_attribute_name(attr)));
-#ifdef USE_TWINEPOOL
-	return design->twines().add(s);
-#else
-	return IdString('\\' + string(get_cstr(get_attribute_name(attr))));
-#endif
+	return design->twines().add('\\' + string(get_cstr(get_attribute_name(attr))));
 }
 
 static void add_attributes_chain(Design *design, RTLIL::AttrObject &obj, Attribute attr)
@@ -736,13 +726,7 @@ static RTLIL::Module *import_module(RTLIL::Design *design, GhdlSynth::Module m)
                 }
 		Param_Idx nbr_params = get_nbr_params(m);
 		for (Param_Idx idx = 0; idx < nbr_params; idx++) {
-			string s = to_str(get_param_name(m, idx));
-			IdString id;
-#ifdef USE_TWINEPOOL
-			id = design->twines().add(s);
-#else
-			id = s;
-#endif
+			IdString id = design->twines().add(to_str(get_param_name(m, idx)));
 			module->avail_parameters(id);
 		}
 
@@ -1391,11 +1375,7 @@ static void ghdl_read_cb(unsigned int raw_id, unsigned int node, void *arg)
 	GhdlModule *module;
 
 	module = new GhdlModule(design);
-#ifdef USE_TWINEPOOL
 	module->name = design->twines().add("$abstract\\" + module_name);
-#else
-	module->name = "$abstract\\" + module_name;
-#endif
 	module->node = node;
 
 	// log("Importing module %s.\n", RTLIL::id2cstr(module->name));
