@@ -78,6 +78,7 @@ dict<std::string, int> auto_name_map;
 std::string auto_prefix;
 int vhdl_std = 93;
 std::string work_library = "work";
+char uninit_val = '0'; // value emitted for uninitialised memory bits: '0', 'X', or '-'
 
 RTLIL::Module *active_module = nullptr;
 dict<RTLIL::SigBit, RTLIL::State> active_initdata;
@@ -1618,11 +1619,11 @@ void dump_memory(std::ostream &f, std::string indent, Mem &mem)
 						init_str += "1";
 						break;
 					default:
-						init_str += "0";
+						init_str += uninit_val;
 						break;
 					}
 				} else {
-					init_str += "0";
+					init_str += uninit_val;
 				}
 			}
 			init_str += "\"";
@@ -2430,6 +2431,13 @@ struct VhdlBackend : public Backend {
 		log("        without this option all internal cells are converted to VHDL\n");
 		log("        expressions.\n");
 		log("\n");
+		log("    -uninit <0|X|->\n");
+		log("        value to use for uninitialised bits in memory aggregate\n");
+		log("        initialisers (bits not covered by any MemInit enable).\n");
+		log("        '0' (default): safe for synthesis; simulation sees zero.\n");
+		log("        'X': propagating unknown; useful for X-based verification.\n");
+		log("        '-': synthesis don't-care; simulators treat as std_logic '-'.\n");
+		log("\n");
 		log("    -blackboxes\n");
 		log("        usually modules with the 'blackbox' attribute are ignored. with\n");
 		log("        this option set only the modules with the 'blackbox' attribute\n");
@@ -2489,6 +2497,18 @@ struct VhdlBackend : public Backend {
 			}
 			if (arg == "-noexpr") {
 				writer.noexpr = true;
+				continue;
+			}
+			if (arg == "-uninit" && argidx + 1 < args.size()) {
+				std::string val = args[++argidx];
+				if (val == "0")
+					writer.uninit_val = '0';
+				else if (val == "X")
+					writer.uninit_val = 'X';
+				else if (val == "-")
+					writer.uninit_val = '-';
+				else
+					log_cmd_error("Invalid -uninit value `%s'. Use 0, X, or -.\n", val.c_str());
 				continue;
 			}
 			if (arg == "-blackboxes") {
