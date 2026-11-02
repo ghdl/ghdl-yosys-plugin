@@ -1589,7 +1589,7 @@ void dump_memory(std::ostream &f, std::string indent, Mem &mem)
 
 	// Type and signal declaration (collected for the declarative region)
 	mem_type_decls.push_back(
-	  stringf("type %s is array(0 to %d) of std_logic_vector(%d downto 0);", type_name.c_str(), mem.size - 1, mem.width - 1));
+	  stringf("type %s is array(%d to %d) of std_logic_vector(%d downto 0);", type_name.c_str(), mem.start_offset, mem.start_offset + mem.size - 1, mem.width - 1));
 
 	// Init data
 	bool has_init = false;
