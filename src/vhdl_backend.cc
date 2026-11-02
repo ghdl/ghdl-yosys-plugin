@@ -78,6 +78,7 @@ dict<std::string, int> auto_name_map;
 std::string auto_prefix;
 int vhdl_std = 93;
 std::string work_library = "work";
+char uninit_val = '0'; // value emitted for uninitialised memory bits: '0', 'X', or '-'
 
 RTLIL::Module *active_module = nullptr;
 dict<RTLIL::SigBit, RTLIL::State> active_initdata;
@@ -1016,28 +1017,43 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 	if (cell->type == ID($shift)) {
 		int y_width = cell->getParam(ID::Y_WIDTH).as_int();
 		bool b_signed = cell->getParam(ID::B_SIGNED).as_bool();
+		RTLIL::SigSpec sig_b = cell->getPort(ID::B);
+		int b_width = sig_b.size();
 
 		f << indent << "-- $shift\n";
 		f << indent;
 		dump_sigspec(f, cell->getPort(ID::Y));
-		f << " <= std_logic_vector(resize(";
+		f << " <= ";
 		if (b_signed) {
-			// When B is negative, shift left; when positive, shift right
-			f << "shift_right(";
+			// B is signed: negative B means left-shift by |B|. Use a top-level
+			// when/else (valid VHDL-93) so synthesis sees a single-bit mux select
+			// on the MSB of B rather than a comparator. abs(signed(B)) gives the
+			// magnitude in both directions.
+			f << "std_logic_vector(resize(shift_left(";
 			dump_sigspec_unsigned(f, cell->getPort(ID::A));
-			f << ", to_integer(";
-			dump_sigspec_signed(f, cell->getPort(ID::B));
-			f << "))";
+			f << ", to_integer(abs(signed(";
+			dump_sigspec(f, sig_b);
+			f << ")))), " << y_width << "))";
+			if (y_width == 1)
+				f << "(0)";
+			f << "\n" << indent << "    when ";
+			dump_sigspec(f, sig_b.extract(b_width - 1, 1));
+			f << " = '1' else std_logic_vector(resize(shift_right(";
+			dump_sigspec_unsigned(f, cell->getPort(ID::A));
+			f << ", to_integer(unsigned(";
+			dump_sigspec(f, sig_b);
+			f << "))), " << y_width << "))";
+			if (y_width == 1)
+				f << "(0)";
 		} else {
-			f << "shift_right(";
+			f << "std_logic_vector(resize(shift_right(";
 			dump_sigspec_unsigned(f, cell->getPort(ID::A));
 			f << ", to_integer(";
 			dump_sigspec_unsigned(f, cell->getPort(ID::B));
-			f << "))";
+			f << ")), " << y_width << "))";
+			if (y_width == 1)
+				f << "(0)";
 		}
-		f << ", " << y_width << "))";
-		if (y_width == 1)
-			f << "(0)";
 		f << ";\n";
 		return true;
 	}
@@ -1589,7 +1605,7 @@ void dump_memory(std::ostream &f, std::string indent, Mem &mem)
 
 	// Type and signal declaration (collected for the declarative region)
 	mem_type_decls.push_back(
-	  stringf("type %s is array(0 to %d) of std_logic_vector(%d downto 0);", type_name.c_str(), mem.size - 1, mem.width - 1));
+	  stringf("type %s is array(%d to %d) of std_logic_vector(%d downto 0);", type_name.c_str(), mem.start_offset, mem.start_offset + mem.size - 1, mem.width - 1));
 
 	// Init data
 	bool has_init = false;
@@ -1618,11 +1634,11 @@ void dump_memory(std::ostream &f, std::string indent, Mem &mem)
 						init_str += "1";
 						break;
 					default:
-						init_str += "0";
+						init_str += uninit_val;
 						break;
 					}
 				} else {
-					init_str += "0";
+					init_str += uninit_val;
 				}
 			}
 			init_str += "\"";
@@ -2430,6 +2446,13 @@ struct VhdlBackend : public Backend {
 		log("        without this option all internal cells are converted to VHDL\n");
 		log("        expressions.\n");
 		log("\n");
+		log("    -uninit <0|X|->\n");
+		log("        value to use for uninitialised bits in memory aggregate\n");
+		log("        initialisers (bits not covered by any MemInit enable).\n");
+		log("        '0' (default): safe for synthesis; simulation sees zero.\n");
+		log("        'X': propagating unknown; useful for X-based verification.\n");
+		log("        '-': synthesis don't-care; simulators treat as std_logic '-'.\n");
+		log("\n");
 		log("    -blackboxes\n");
 		log("        usually modules with the 'blackbox' attribute are ignored. with\n");
 		log("        this option set only the modules with the 'blackbox' attribute\n");
@@ -2489,6 +2512,18 @@ struct VhdlBackend : public Backend {
 			}
 			if (arg == "-noexpr") {
 				writer.noexpr = true;
+				continue;
+			}
+			if (arg == "-uninit" && argidx + 1 < args.size()) {
+				std::string val = args[++argidx];
+				if (val == "0")
+					writer.uninit_val = '0';
+				else if (val == "X")
+					writer.uninit_val = 'X';
+				else if (val == "-")
+					writer.uninit_val = '-';
+				else
+					log_cmd_error("Invalid -uninit value `%s'. Use 0, X, or -.\n", val.c_str());
 				continue;
 			}
 			if (arg == "-blackboxes") {
