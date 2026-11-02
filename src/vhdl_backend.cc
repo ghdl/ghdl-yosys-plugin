@@ -1017,28 +1017,43 @@ bool dump_cell_expr(std::ostream &f, std::string indent, RTLIL::Cell *cell)
 	if (cell->type == ID($shift)) {
 		int y_width = cell->getParam(ID::Y_WIDTH).as_int();
 		bool b_signed = cell->getParam(ID::B_SIGNED).as_bool();
+		RTLIL::SigSpec sig_b = cell->getPort(ID::B);
+		int b_width = sig_b.size();
 
 		f << indent << "-- $shift\n";
 		f << indent;
 		dump_sigspec(f, cell->getPort(ID::Y));
-		f << " <= std_logic_vector(resize(";
+		f << " <= ";
 		if (b_signed) {
-			// When B is negative, shift left; when positive, shift right
-			f << "shift_right(";
+			// B is signed: negative B means left-shift by |B|. Use a top-level
+			// when/else (valid VHDL-93) so synthesis sees a single-bit mux select
+			// on the MSB of B rather than a comparator. abs(signed(B)) gives the
+			// magnitude in both directions.
+			f << "std_logic_vector(resize(shift_left(";
 			dump_sigspec_unsigned(f, cell->getPort(ID::A));
-			f << ", to_integer(";
-			dump_sigspec_signed(f, cell->getPort(ID::B));
-			f << "))";
+			f << ", to_integer(abs(signed(";
+			dump_sigspec(f, sig_b);
+			f << ")))), " << y_width << "))";
+			if (y_width == 1)
+				f << "(0)";
+			f << "\n" << indent << "    when ";
+			dump_sigspec(f, sig_b.extract(b_width - 1, 1));
+			f << " = '1' else std_logic_vector(resize(shift_right(";
+			dump_sigspec_unsigned(f, cell->getPort(ID::A));
+			f << ", to_integer(unsigned(";
+			dump_sigspec(f, sig_b);
+			f << "))), " << y_width << "))";
+			if (y_width == 1)
+				f << "(0)";
 		} else {
-			f << "shift_right(";
+			f << "std_logic_vector(resize(shift_right(";
 			dump_sigspec_unsigned(f, cell->getPort(ID::A));
 			f << ", to_integer(";
 			dump_sigspec_unsigned(f, cell->getPort(ID::B));
-			f << "))";
+			f << ")), " << y_width << "))";
+			if (y_width == 1)
+				f << "(0)";
 		}
-		f << ", " << y_width << "))";
-		if (y_width == 1)
-			f << "(0)";
 		f << ";\n";
 		return true;
 	}
